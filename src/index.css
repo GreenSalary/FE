@@ -11,3 +11,23 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+:root {
+  --color-primary: #01D3AC;
+  --color-2: #08D8B1;
+  --color-3: #68DFC9;
+  --color-4: #E7FFFB;
+
+  --color-background-bright: #F8F8F8;
+  --color-background-dark: #565656;
+
+  --color-text-bright: #D9D9D9;
+  --color-text-dark: #A8ABB0;
+
+  --color-submit-btn: #3F8CFE;
+  --color-qr: #7F8AF0;
+
+  --color-status-success: #38D504;
+  --color-status-fail: #FF0000;
+  --color-status-none: #B7BAB9;
+}
