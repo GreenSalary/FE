@@ -442,7 +442,7 @@ const PublisherDetail = () => {
           <TopRight>
             <SectionTitle>광고 보수 현황</SectionTitle>
             <StatusInput>
-              <Amount>{staticData.amount}원</Amount>
+              <Amount>{staticData.amount}ETH</Amount>
               <StatusGroup>
                 <StatusBadge status={staticData.status} />
                 <InquiryButton onClick={handleInquiry}>
@@ -466,7 +466,7 @@ const PublisherDetail = () => {
               <Label>보수</Label>
               <ContentArea>
                 <Input value={contractDetail.reward || ''} readOnly />
-                <div>원</div>
+                <div>ETH</div>
               </ContentArea>
               <ContentArea>
               </ContentArea>

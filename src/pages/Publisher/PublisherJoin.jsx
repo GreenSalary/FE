@@ -283,7 +283,7 @@ const PublisherJoin = () => {
                 <Label>보수</Label>
                 <ContentArea>
                   <Input value={contractDetail.reward || ''} readOnly />
-                  <div>원</div>
+                  <div>ETH</div>
                 </ContentArea>
                 <ContentArea>
                 </ContentArea>
