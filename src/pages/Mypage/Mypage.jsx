@@ -143,7 +143,7 @@ const Mypage = () => {
       console.log('- accessToken:', localStorage.getItem('accessToken')?.substring(0, 20) + '...');
 
       // 역할별 API 엔드포인트 결정 - userType 사용
-      // publisher는 influencer API를 호출
+
       const endpoint = userType === 'advertiser' 
         ? `${API_BASE_URL}/advertiser/mypage`
         : `${API_BASE_URL}/influencer/mypage`;

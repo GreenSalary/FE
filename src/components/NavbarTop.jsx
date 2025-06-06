@@ -29,8 +29,8 @@ const NavbarTop = ({ onHamburgerClick }) => {
     switch(userType) {
       case 'advertiser':
         return '/advertiser/mypage';
-      case 'publisher':
-        return '/publisher/mypage';
+      case 'influencer':
+        return '/influencer/mypage';
       default:
         return '/';
     }

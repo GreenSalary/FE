@@ -7,7 +7,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 export const USER_TYPES = {
   ADVERTISER: 'advertiser',
-  PUBLISHER: 'publisher',
+  INFLUENCER: 'influencer',
   ADMIN: 'admin'
 };
 
@@ -147,9 +147,6 @@ export const UserProvider = ({ children }) => {
       };
 
       let normalizedUserType = decoded.role || 'advertiser';
-      if (normalizedUserType === 'influencer') {
-        normalizedUserType = 'publisher';
-      }
 
       setUserType(normalizedUserType);
       setIsLoggedIn(true);
@@ -314,11 +311,6 @@ export const UserProvider = ({ children }) => {
 
       let normalizedUserType = data.role || selectedUserType;
 
-      // role 정규화
-      if (normalizedUserType === 'influencer') {
-        normalizedUserType = 'publisher';
-      }
-
       // 상태 업데이트
       setUserType(normalizedUserType);
       setIsLoggedIn(true);
@@ -370,11 +362,11 @@ export const UserProvider = ({ children }) => {
   };
 
   const getHomePath = () => {
-    if (userType === USER_TYPES.ADVERTISER) return '/advertiser/home';
-    if (userType === USER_TYPES.PUBLISHER) return '/publisher/home';
-    if (userType === USER_TYPES.ADMIN) return '/admin';
-    return '/';
-  };
+  if (userType === USER_TYPES.ADVERTISER) return '/advertiser/home';
+  if (userType === USER_TYPES.INFLUENCER) return '/influencer/home';
+  if (userType === USER_TYPES.ADMIN) return '/admin/home'; 
+  return '/';
+};
 
   const value = {
     userType,

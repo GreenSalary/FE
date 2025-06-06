@@ -44,13 +44,13 @@ const NavbarLeft = ({ detailMode = false }) => {
   if (detailMode) {
     if (userType === 'advertiser') {
       visibleTopIcons = ['detail', 'members', 'payment'];
-    } else if (userType === 'publisher') {
+    } else if (userType === 'influencer') {
       visibleTopIcons = ['detail'];
     }
   } else {
     if (userType === 'advertiser') {
       visibleTopIcons = ['home', 'create'];
-    } else if (userType === 'publisher') {
+    } else if (userType === 'influencer') {
       visibleTopIcons = ['home', 'join'];
     }
   }

@@ -327,7 +327,7 @@ const InfluencerHome = () => {
 
   // 계약 상세 페이지로 이동
   const handleRowClick = (contractId) => {
-    navigate(`/publisher/detail/${contractId}`);
+    navigate(`/influencer/detail/${contractId}`);
   };
 
   // 사용자 로딩 중일 때

@@ -439,7 +439,7 @@ const PublisherJoin = () => {
       console.log('✅ 백엔드 계약 수락 성공:', result);
       
       alert('계약이 수락되었습니다!');
-      navigate('/publisher');
+      navigate('/influencer');
       
     } catch (err) {
       console.error('🚨 계약 수락 실패:', err);
