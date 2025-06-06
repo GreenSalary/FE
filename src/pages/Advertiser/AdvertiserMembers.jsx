@@ -171,10 +171,78 @@ const AdvertiserMembers = () => {
     setSelectAll(availableInfluencers.length > 0 && availableInfluencers.every(id => newSelected.has(id)));
   };
 
-  //문의버튼
-  const handleInquiry = (influencer) => {
-    console.log('문의하기:', influencer);
-    alert(`${influencer.influencer_name}님에게 문의를 보냅니다.`);
+  // 문의 버튼 처리
+  const handleInquiry = async (influencer) => {
+    const confirmed = window.confirm(`${influencer.influencer_name}님에 대한 문의를 보내시겠습니까?`);
+    
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      console.log('📧 문의 요청 시작:', influencer);
+      
+      const requestUrl = `${API_BASE_URL}/advertiser/ask/${influencer.joinId}`;
+
+      const response = await authenticatedFetch(`${API_BASE_URL}/advertiser/ask/${influencer.joinId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getToken()}`
+        }
+      });
+
+      if (!response.ok) {
+      // 🔥 response.clone()으로 스트림 복제
+      let backendMessage = '알 수 없는 오류가 발생했습니다.';
+      
+      try {
+        const errorData = await response.clone().json();
+        backendMessage = errorData.message || backendMessage;
+        
+        console.error('🚨 백엔드 에러 응답:', errorData);
+        console.error('📝 백엔드 에러 메시지:', backendMessage);
+        
+      } catch (parseError) {
+        // JSON 파싱 실패시 텍스트로 응답 확인
+        try {
+          const responseText = await response.text();
+          console.error('🚨 JSON 파싱 실패, 원본 응답:', responseText);
+        } catch (textError) {
+          console.error('🚨 응답 읽기 완전 실패:', textError);
+        }
+      }
+      
+      // 상태 코드별 처리
+      if (response.status === 404) {
+        console.error('🚨 404 에러 - 백엔드 메시지:', backendMessage);
+        throw new Error(`404 Not Found: ${backendMessage}`);
+      } else if (response.status === 401) {
+        console.error('🚨 401 에러 - 인증 실패:', backendMessage);
+        throw new Error(`인증 실패: ${backendMessage}`);
+      } else if (response.status === 400) {
+        console.error('🚨 400 에러 - 잘못된 요청:', backendMessage);
+        throw new Error(`잘못된 요청: ${backendMessage}`);
+      } else if (response.status === 500) {
+        console.error('🚨 500 에러 - 서버 오류:', backendMessage);
+        throw new Error(`서버 오류: ${backendMessage}`);
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${backendMessage}`);
+    }
+
+      const responseData = await response.json();
+      console.log('📧 문의 응답:', responseData);
+      
+      alert(`✅ ${influencer.influencer_name}님에게 문의가 성공적으로 전송되었습니다.`);
+      
+      // 상태 업데이트를 위해 데이터 새로고침
+      fetchInfluencers(filter);
+      
+    } catch (error) {
+      console.error('🚨 문의 전송 실패:', error);
+      alert(`❌ 문의 전송 중 오류가 발생했습니다: ${error.message}`);
+    }
   };
 
   const handlePayment = async () => {
@@ -231,7 +299,7 @@ const AdvertiserMembers = () => {
             gas: 300000
           });
 
-          const paidAt = new Date().toISOString();
+          const paidAt = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString();
           successfulPayments.push({ 
             joinId: inf.joinId, 
             paidAt: paidAt 
@@ -286,8 +354,6 @@ const AdvertiserMembers = () => {
     }
   };
 
-
-  // 필터링 로직 제거 - 백엔드에서 처리하므로 data.influencers 그대로 사용
   const filteredInfluencers = data?.influencers || [];
 
   return (
@@ -445,14 +511,18 @@ const AdvertiserMembers = () => {
                         )}
                       </TableCell>
                       <TableCell width="100px" textAlign="center">
-                        {influencer.submit_review_available ? (
-                          <InquiryButton onClick={() => handleInquiry(influencer)}>
-                            문의
-                          </InquiryButton>
-                        ) : (
-                          <DisabledText>-</DisabledText>
-                        )}
-                      </TableCell>
+                      {influencer.review_status === "REVIEW_FROM_ADV" ? (
+                        <InquiryButton disabled>
+                          문의중
+                        </InquiryButton>
+                      ) : influencer.submit_review_available ? (
+                        <InquiryButton onClick={() => handleInquiry(influencer)}>
+                          문의
+                        </InquiryButton>
+                      ) : (
+                        <DisabledText>-</DisabledText>
+                      )}
+                    </TableCell>
                     </TableRow>
                   </React.Fragment>
                 ))
