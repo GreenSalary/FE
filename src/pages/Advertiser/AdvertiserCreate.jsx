@@ -230,7 +230,9 @@ const AdvertiserCreate = () => {
   // 오늘 날짜를 YYYY-MM-DD 형식으로 반환
   const getTodayString = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    // 한국 시간대(UTC+9)로 변환
+    const koreaTime = new Date(today.getTime() + (9 * 60 * 60 * 1000));
+    return koreaTime.toISOString().split('T')[0];
   };
 
   // 특정 날짜에서 하루를 더한 날짜를 YYYY-MM-DD 형식으로 반환
