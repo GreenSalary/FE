@@ -7,6 +7,426 @@ import { useUser } from '../../contexts/UserContext';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
+const PublisherJoin = () => {
+  const [code, setCode] = useState('');
+  const [contractDetail, setContractDetail] = useState(null);
+  const [isVerified, setIsVerified] = useState(false);
+  const [isCodeLoading, setIsCodeLoading] = useState(false);
+  const [isJoinLoading, setIsJoinLoading] = useState(false);
+  const [codeError, setCodeError] = useState('');
+  const [contractId, setContractId] = useState(null);
+  const [web3, setWeb3] = useState(null);
+  const [contract, setContract] = useState(null);
+  
+  const navigate = useNavigate();
+  const { authenticatedFetch, isLoggedIn, getToken } = useUser();
+
+  // Web3 초기화
+  const initWeb3 = async () => {
+    try {
+      const providerUrl = process.env.REACT_APP_WEB3_PROVIDER_URL || 'http://127.0.0.1:8545';
+      const networkId = process.env.REACT_APP_NETWORK_ID || '1337';
+      const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS || AdContract.networks[networkId]?.address;
+
+      if (!contractAddress) {
+        throw new Error('스마트 컨트랙트 주소를 찾을 수 없습니다.');
+      }
+
+      const web3Instance = new Web3(providerUrl);
+      setWeb3(web3Instance);
+
+      const contractInstance = new web3Instance.eth.Contract(
+        AdContract.abi,
+        contractAddress
+      );
+      setContract(contractInstance);
+
+      console.log('Web3 초기화 완료:', { contractAddress, networkId });
+      
+    } catch (error) {
+      console.error('Web3 초기화 실패:', error);
+      throw error;
+    }
+  };
+
+  // 컴포넌트 마운트 시 Web3 초기화
+  useEffect(() => {
+    initWeb3().catch(console.error);
+  }, []);
+
+  // 코드 검증 및 계약 정보 조회
+  const handleSubmit = async () => {
+    if (!code.trim()) {
+      setCodeError('초대 코드를 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsCodeLoading(true);
+      setCodeError('');
+      
+      console.log('🔍 초대 코드 검증 시작:', code);
+      
+      // 1. 초대 코드로 계약 정보 조회
+      const response = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accessCode: code }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '올바르지 않은 코드입니다.');
+      }
+      
+      const codeResponse = await response.json();
+      console.log('✅ 코드 검증 성공:', codeResponse);
+      
+      // 계약 ID 추출
+      const contractId = codeResponse.contractId;
+      if (!contractId) {
+        throw new Error('계약 ID를 찾을 수 없습니다.');
+      }
+      
+      console.log('📋 계약 상세 정보 요청:', contractId);
+      
+      // 2. 계약 ID로 상세 정보 조회
+      const detailResponse = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/${contractId}`);
+      
+      if (!detailResponse.ok) {
+        const errorData = await detailResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || '계약 정보를 불러오는데 실패했습니다.');
+      }
+      
+      const contractDetail = await detailResponse.json();
+      console.log('✅ 계약 상세 정보 조회 성공:', contractDetail);
+      
+      setContractId(contractId);
+      setContractDetail(contractDetail);
+      setIsVerified(true);
+      
+    } catch (err) {
+      console.error('🚨 코드 검증 실패:', err);
+      setCodeError(err.message);
+    } finally {
+      setIsCodeLoading(false);
+    }
+  };
+
+  // 계약 수락 (스마트 컨트랙트 포함)
+  const handleAccept = async () => {
+    if (!contractId || !contractDetail) {
+      alert('계약 정보가 없습니다.');
+      return;
+    }
+
+    const isConfirmed = window.confirm('계약을 수락하시겠습니까?');
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      setIsJoinLoading(true);
+      
+      console.log('📝 계약 수락 요청:', contractId);
+      
+      let joinTransactionHash = null;
+      
+      try {
+        console.log('🔗 스마트 컨트랙트 join 호출 시작...');
+        
+        // Web3 초기화 확인
+        if (!web3 || !contract) {
+          await initWeb3();
+        }
+        
+        // MetaMask 연결 또는 Ganache 계정 사용
+        let account;
+        if (typeof window.ethereum !== 'undefined') {
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          account = accounts[0];
+        } else {
+          // Ganache 계정 사용
+          const accountList = await web3.eth.getAccounts();
+          account = accountList[0];
+        }
+        
+        if (!account) {
+          throw new Error('지갑 계정을 찾을 수 없습니다.');
+        }
+        
+        console.log('💼 사용할 계정:', account);
+        console.log('📋 스마트 컨트랙트 Ad ID:', contractDetail.smartContractId);
+        
+        // 스마트 컨트랙트 joinAd 함수 호출
+        const tx = await contract.methods.joinAd(contractDetail.smartContractId).send({
+          from: account,
+          gas: 500000,
+          gasPrice: '20000000000'
+        });
+        
+        console.log('✅ 스마트 컨트랙트 join 성공:', tx.transactionHash);
+        joinTransactionHash = tx.transactionHash;
+        
+      } catch (contractError) {
+        console.error('🚨 스마트 컨트랙트 join 실패:', contractError);
+        throw new Error(`스마트 컨트랙트 처리 실패: ${contractError.message}`);
+      }
+      
+      // 스마트 컨트랙트 성공 후 백엔드 API로 계약 수락 처리
+      const response = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/${contractId}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          joinTransactionHash // 스마트 컨트랙트 트랜잭션 해시 포함
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '계약 수락에 실패했습니다.');
+      }
+      
+      const result = await response.json();
+      console.log('✅ 백엔드 계약 수락 성공:', result);
+      
+      alert('계약이 수락되었습니다!');
+      navigate('/influencer');
+      
+    } catch (err) {
+      console.error('🚨 계약 수락 실패:', err);
+      alert(err.message);
+    } finally {
+      setIsJoinLoading(false);
+    }
+  };
+
+  const handleOverlayClick = () => {
+    navigate(-1); 
+  };
+
+  // 날짜 포맷팅 함수
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+  };
+
+  // 사이트명 변환 함수
+  const getSiteDisplayName = (siteCode) => {
+    switch (siteCode) {
+      case 'Naver Blog':
+        return '네이버 블로그';
+      case 'Instagram':
+        return '인스타그램';
+      case 'YouTube':
+        return '유튜브';
+      default:
+        return siteCode || '네이버 블로그';
+    }
+  };
+
+  // 미디어 요구사항 추출
+  const hasTextRequirement = contractDetail?.media?.minTextLength > 0;
+  const hasPhotoRequirement = contractDetail?.media?.minImageCount > 0;
+
+  return (
+    <>
+      {!isVerified && (
+        <Overlay onClick={handleOverlayClick}>
+          <Modal onClick={(e) => e.stopPropagation()}>
+            <h2>초대 코드 입력</h2>
+            <Input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="초대 코드를 입력하세요"
+              disabled={isCodeLoading}
+            />
+            {codeError && <ErrorMessage>{codeError}</ErrorMessage>}
+            <Button onClick={handleSubmit} disabled={isCodeLoading}>
+              제출
+            </Button>
+          </Modal>
+        </Overlay>
+      )}
+
+      {isVerified && contractDetail && (
+        <Container>
+          <Header>
+            <MainTitle>계약 등록</MainTitle>
+            <SubmitButton onClick={handleAccept} disabled={isJoinLoading}>
+              {isJoinLoading && <LoadingSpinner />}
+              수락
+            </SubmitButton>
+          </Header>
+
+          <ContentContainer>
+            <SubTitle>광고</SubTitle>
+            <Divider />
+
+            <FormCard>
+              <Row>
+                <Label>광고명</Label>
+                <ContentArea>
+                  <Input value={contractDetail.title || ''} readOnly />
+                </ContentArea>
+              </Row>
+
+              <Row>
+                <Label>보수</Label>
+                <ContentArea>
+                  <Input value={contractDetail.reward || ''} readOnly />
+                  <div>원</div>
+                </ContentArea>
+                <ContentArea>
+                </ContentArea>
+              </Row>
+
+              <Row>
+                <Label>업로드 기간</Label>
+                <ContentArea>
+                  <Input 
+                    type="date" 
+                    value={formatDate(contractDetail.uploadPeriod?.startDate)} 
+                    readOnly 
+                  />
+                  <div style={{ margin: '0 8px' }}>~</div>
+                  <Input 
+                    type="date" 
+                    value={formatDate(contractDetail.uploadPeriod?.endDate)} 
+                    readOnly 
+                  />
+                </ContentArea>
+              </Row>
+
+              {contractDetail.maintainPeriod && (
+                <Row>
+                  <Label>유지 기간</Label>
+                  <ContentArea>
+                    <Input 
+                      type="date" 
+                      value={formatDate(contractDetail.maintainPeriod?.startDate)} 
+                      readOnly 
+                    />
+                    <div style={{ margin: '0 8px' }}>~</div>
+                    <Input 
+                      type="date" 
+                      value={formatDate(contractDetail.maintainPeriod?.endDate)} 
+                      readOnly 
+                    />
+                  </ContentArea>
+                </Row>
+              )}
+
+              <Row>
+                <Label>필수 키워드</Label>
+                <ContentArea style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <TagBox>
+                    {(contractDetail.keywords || []).map((keyword, index) => (
+                      <Tag key={index}># {keyword}</Tag>
+                    ))}
+                  </TagBox>
+                </ContentArea>
+              </Row>
+
+              <Row>
+                <Label>세부 조건</Label>
+                <ContentArea style={{ flexDirection: 'column' }}>
+                  {(contractDetail.conditions || []).map((condition, index) => (
+                    <ConditionRow key={index}>
+                      <ConditionNumber>{index + 1}.</ConditionNumber>
+                      <ConditionTextarea value={condition} readOnly />
+                    </ConditionRow>
+                  ))}
+                </ContentArea>
+              </Row>
+
+              <Row>
+                <Label>업로드 사이트</Label>
+                <ContentArea>
+                  <Select value={getSiteDisplayName(contractDetail.site)} disabled>
+                    <option>네이버 블로그</option>
+                    <option>인스타그램</option>
+                    <option>유튜브</option>
+                  </Select>
+                </ContentArea>
+                <Label>필수 매체<br/>(중복 가능)</Label>
+                <ContentArea style={{ flex: 4 }}>
+                  <CheckboxWrapper>
+                    <Checkbox 
+                      type="checkbox" 
+                      checked={hasTextRequirement} 
+                      disabled 
+                    />
+                    <div>글</div>
+                    <FixedWidthInput 
+                      value={hasTextRequirement ? contractDetail.media.minTextLength : ''} 
+                      readOnly 
+                    />
+                    <div>자 이상</div>
+                  </CheckboxWrapper>
+                  <CheckboxWrapper>
+                    <Checkbox 
+                      type="checkbox" 
+                      checked={hasPhotoRequirement} 
+                      disabled 
+                    />
+                    <div>사진</div>
+                    <FixedWidthInput 
+                      value={hasPhotoRequirement ? contractDetail.media.minImageCount : ''} 
+                      readOnly 
+                    />
+                    <div>장 이상</div>
+                  </CheckboxWrapper>
+                </ContentArea>
+              </Row>
+
+              {/* 제품 사진 표시 (사진이 있는 경우만) */}
+              {contractDetail.photo_url && (
+                <Row>
+                  <Label>제품 사진</Label>
+                  <ContentArea style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <ImageSection>
+                      <ImagePreviewContainer>
+                        <ImagePreviewItem>
+                          <PreviewImage 
+                            src={contractDetail.photo_url} 
+                            alt="제품 사진"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </ImagePreviewItem>
+                      </ImagePreviewContainer>
+                    </ImageSection>
+                  </ContentArea>
+                </Row>
+              )}
+
+
+              <Row>
+                <Label>상세 설명</Label>
+                <ContentArea style={{ paddingBottom: '8px' }}>
+                  <Textarea value={contractDetail.description || ''} readOnly />
+                </ContentArea>
+              </Row>
+            </FormCard>
+          </ContentContainer>
+        </Container>
+      )}
+    </>
+  );
+};
+
+export default PublisherJoin;
+
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
@@ -264,385 +684,26 @@ const ErrorMessage = styled.div`
   margin-top: 8px;
 `;
 
-// 날짜 포맷팅 함수
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD 형식
-};
+const ImagePreviewContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+`;
 
-// 사이트명 변환 함수
-const getSiteDisplayName = (siteCode) => {
-  switch (siteCode) {
-    case 'Naver Blog':
-      return '네이버 블로그';
-    case 'Instagram':
-      return '인스타그램';
-    case 'YouTube':
-      return '유튜브';
-    default:
-      return siteCode || '네이버 블로그';
-  }
-};
+const ImagePreviewItem = styled.div`
+  position: relative;
+  width: 100px;
+  height: 100px;
+`;
 
-const PublisherJoin = () => {
-  const [code, setCode] = useState('');
-  const [contractDetail, setContractDetail] = useState(null);
-  const [isVerified, setIsVerified] = useState(false);
-  const [isCodeLoading, setIsCodeLoading] = useState(false);
-  const [isJoinLoading, setIsJoinLoading] = useState(false);
-  const [codeError, setCodeError] = useState('');
-  const [contractId, setContractId] = useState(null);
-  
-  const navigate = useNavigate();
-  const { authenticatedFetch, isLoggedIn, getToken } = useUser();
+const PreviewImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+`;
 
-  // 코드 검증 및 계약 정보 조회
-  const handleSubmit = async () => {
-    if (!code.trim()) {
-      setCodeError('초대 코드를 입력해주세요.');
-      return;
-    }
-
-    try {
-      setIsCodeLoading(true);
-      setCodeError('');
-      
-      console.log('🔍 초대 코드 검증 시작:', code);
-      
-      // 1. 초대 코드로 계약 정보 조회
-      const response = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/code`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ accessCode: code }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || '올바르지 않은 코드입니다.');
-      }
-      
-      const codeResponse = await response.json();
-      console.log('✅ 코드 검증 성공:', codeResponse);
-      
-      // 계약 ID 추출
-      const contractId = codeResponse.contractId;
-      if (!contractId) {
-        throw new Error('계약 ID를 찾을 수 없습니다.');
-      }
-      
-      console.log('📋 계약 상세 정보 요청:', contractId);
-      
-      // 2. 계약 ID로 상세 정보 조회
-      const detailResponse = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/${contractId}`);
-      
-      if (!detailResponse.ok) {
-        const errorData = await detailResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || '계약 정보를 불러오는데 실패했습니다.');
-      }
-      
-      const contractDetail = await detailResponse.json();
-      console.log('✅ 계약 상세 정보 조회 성공:', contractDetail);
-      
-      setContractId(contractId);
-      setContractDetail(contractDetail);
-      setIsVerified(true);
-      
-    } catch (err) {
-      console.error('🚨 코드 검증 실패:', err);
-      setCodeError(err.message);
-    } finally {
-      setIsCodeLoading(false);
-    }
-  };
-
-  // 계약 수락
-  const handleAccept = async () => {
-    if (!contractId) {
-      alert('계약 ID가 없습니다.');
-      return;
-    }
-
-    // 확인 창 표시
-    const isConfirmed = window.confirm('계약을 수락하시겠습니까?');
-    if (!isConfirmed) {
-      return;
-    }
-
-    try {
-      setIsJoinLoading(true);
-      
-      console.log('📝 계약 수락 요청:', contractId);
-      
-      // TODO: 나중에 스마트 컨트랙트 joinAd 함수 호출 기능 추가
-      // let joinTransactionHash = null;
-      // 
-      // try {
-      //   console.log('🔗 스마트 컨트랙트 join 호출 시작...');
-      //   
-      //   // Web3 초기화
-      //   if (!web3 || !contract) {
-      //     await initWeb3();
-      //   }
-      //   
-      //   // MetaMask 연결 또는 Ganache 계정 사용
-      //   let account;
-      //   if (typeof window.ethereum !== 'undefined') {
-      //     const accounts = await window.ethereum.request({ 
-      //       method: 'eth_requestAccounts' 
-      //     });
-      //     account = accounts[0];
-      //   } else {
-      //     // Ganache 계정 사용
-      //     const accountList = await web3.eth.getAccounts();
-      //     account = accountList[0];
-      //   }
-      //   
-      //   if (!account) {
-      //     throw new Error('지갑 계정을 찾을 수 없습니다.');
-      //   }
-      //   
-      //   // 스마트 컨트랙트 joinAd 함수 호출
-      //   const tx = await contract.methods.joinAd(contractDetail.smartContractAdId).send({
-      //     from: account,
-      //     gas: 500000,
-      //     gasPrice: '20000000000'
-      //   });
-      //   
-      //   console.log('✅ 스마트 컨트랙트 join 성공:', tx.transactionHash);
-      //   joinTransactionHash = tx.transactionHash;
-      //   
-      // } catch (contractError) {
-      //   console.error('🚨 스마트 컨트랙트 join 실패:', contractError);
-      //   throw new Error(`스마트 컨트랙트 처리 실패: ${contractError.message}`);
-      // }
-      
-      // 스마트 컨트랙트 성공 후 백엔드 API로 계약 수락 처리
-      const response = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/${contractId}/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // body: JSON.stringify({ 
-        //   joinTransactionHash // 스마트 컨트랙트 트랜잭션 해시 포함
-        // }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || '계약 수락에 실패했습니다.');
-      }
-      
-      const result = await response.json();
-      console.log('✅ 백엔드 계약 수락 성공:', result);
-      
-      alert('계약이 수락되었습니다!');
-      navigate('/influencer');
-      
-    } catch (err) {
-      console.error('🚨 계약 수락 실패:', err);
-      alert(err.message);
-    } finally {
-      setIsJoinLoading(false);
-    }
-  };
-
-// TODO: 나중에 스마트 컨트랙트 연동 시 Web3 초기화 함수
-// const initWeb3 = async () => {
-//   try {
-//     const providerUrl = process.env.REACT_APP_WEB3_PROVIDER_URL || 'http://127.0.0.1:8545';
-//     const networkId = process.env.REACT_APP_NETWORK_ID || '1337';
-//     const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS || AdContract.networks[networkId]?.address;
-
-//     const web3Instance = new Web3(providerUrl);
-//     setWeb3(web3Instance);
-
-//     const contractInstance = new web3Instance.eth.Contract(
-//       AdContract.abi,
-//       contractAddress
-//     );
-//     setContract(contractInstance);
-
-//     console.log('Web3 초기화 완료 (Publisher)');
-    
-//   } catch (error) {
-//     console.error('Web3 초기화 실패:', error);
-//   }
-// };
-
-  const handleOverlayClick = () => {
-    navigate(-1); 
-  };
-
-  // 미디어 요구사항 추출
-  const hasTextRequirement = contractDetail?.media?.minTextLength > 0;
-  const hasPhotoRequirement = contractDetail?.media?.minImageCount > 0;
-
-  return (
-    <>
-      {!isVerified && (
-        <Overlay onClick={handleOverlayClick}>
-          <Modal onClick={(e) => e.stopPropagation()}>
-            <h2>초대 코드 입력</h2>
-            <Input
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="초대 코드를 입력하세요"
-              disabled={isCodeLoading}
-            />
-            {codeError && <ErrorMessage>{codeError}</ErrorMessage>}
-            <Button onClick={handleSubmit} disabled={isCodeLoading}>
-              제출
-            </Button>
-          </Modal>
-        </Overlay>
-      )}
-
-      {isVerified && contractDetail && (
-        <Container>
-          <Header>
-            <MainTitle>계약 등록</MainTitle>
-            <SubmitButton onClick={handleAccept} disabled={isJoinLoading}>
-              수락
-            </SubmitButton>
-          </Header>
-
-          <ContentContainer>
-            <SubTitle>광고</SubTitle>
-            <Divider />
-
-            <FormCard>
-              <Row>
-                <Label>광고명</Label>
-                <ContentArea>
-                  <Input value={contractDetail.title || ''} readOnly />
-                </ContentArea>
-              </Row>
-
-              <Row>
-                <Label>보수</Label>
-                <ContentArea>
-                  <Input value={contractDetail.reward || ''} readOnly />
-                  <div>원</div>
-                </ContentArea>
-                <ContentArea>
-                </ContentArea>
-              </Row>
-
-              <Row>
-                <Label>업로드 기간</Label>
-                <ContentArea>
-                  <Input 
-                    type="date" 
-                    value={formatDate(contractDetail.uploadPeriod?.startDate)} 
-                    readOnly 
-                  />
-                  <div style={{ margin: '0 8px' }}>~</div>
-                  <Input 
-                    type="date" 
-                    value={formatDate(contractDetail.uploadPeriod?.endDate)} 
-                    readOnly 
-                  />
-                </ContentArea>
-              </Row>
-
-              {contractDetail.maintainPeriod && (
-                <Row>
-                  <Label>유지 기간</Label>
-                  <ContentArea>
-                    <Input 
-                      type="date" 
-                      value={formatDate(contractDetail.maintainPeriod?.startDate)} 
-                      readOnly 
-                    />
-                    <div style={{ margin: '0 8px' }}>~</div>
-                    <Input 
-                      type="date" 
-                      value={formatDate(contractDetail.maintainPeriod?.endDate)} 
-                      readOnly 
-                    />
-                  </ContentArea>
-                </Row>
-              )}
-
-              <Row>
-                <Label>필수 키워드</Label>
-                <ContentArea style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <TagBox>
-                    {(contractDetail.keywords || []).map((keyword, index) => (
-                      <Tag key={index}># {keyword}</Tag>
-                    ))}
-                  </TagBox>
-                </ContentArea>
-              </Row>
-
-              <Row>
-                <Label>세부 조건</Label>
-                <ContentArea style={{ flexDirection: 'column' }}>
-                  {(contractDetail.conditions || []).map((condition, index) => (
-                    <ConditionRow key={index}>
-                      <ConditionNumber>{index + 1}.</ConditionNumber>
-                      <ConditionTextarea value={condition} readOnly />
-                    </ConditionRow>
-                  ))}
-                </ContentArea>
-              </Row>
-
-              <Row>
-                <Label>업로드 사이트</Label>
-                <ContentArea>
-                  <Select value={getSiteDisplayName(contractDetail.site)} disabled>
-                    <option>네이버 블로그</option>
-                    <option>인스타그램</option>
-                    <option>유튜브</option>
-                  </Select>
-                </ContentArea>
-                <Label>필수 매체<br/>(중복 가능)</Label>
-                <ContentArea style={{ flex: 4 }}>
-                  <CheckboxWrapper>
-                    <Checkbox 
-                      type="checkbox" 
-                      checked={hasTextRequirement} 
-                      disabled 
-                    />
-                    <div>글</div>
-                    <FixedWidthInput 
-                      value={hasTextRequirement ? contractDetail.media.minTextLength : ''} 
-                      readOnly 
-                    />
-                    <div>자 이상</div>
-                  </CheckboxWrapper>
-                  <CheckboxWrapper>
-                    <Checkbox 
-                      type="checkbox" 
-                      checked={hasPhotoRequirement} 
-                      disabled 
-                    />
-                    <div>사진</div>
-                    <FixedWidthInput 
-                      value={hasPhotoRequirement ? contractDetail.media.minImageCount : ''} 
-                      readOnly 
-                    />
-                    <div>장 이상</div>
-                  </CheckboxWrapper>
-                </ContentArea>
-              </Row>
-
-              <Row>
-                <Label>상세 설명</Label>
-                <ContentArea style={{ paddingBottom: '8px' }}>
-                  <Textarea value={contractDetail.description || ''} readOnly />
-                </ContentArea>
-              </Row>
-            </FormCard>
-          </ContentContainer>
-        </Container>
-      )}
-    </>
-  );
-};
-
-export default PublisherJoin;
+const ImageSection = styled.div`
+  margin-top: 16px;
+`;

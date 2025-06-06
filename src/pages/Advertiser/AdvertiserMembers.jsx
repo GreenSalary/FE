@@ -1,33 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { FaChevronDown, FaEllipsisV } from 'react-icons/fa';
+import { FaChevronDown } from 'react-icons/fa';
 import styled from 'styled-components';
 import { useUser } from '../../contexts/UserContext';
+import Web3 from 'web3';
+import AdContract from '../../contracts/AdContract.json';
+
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const AdvertiserMembers = () => {
   const { adId } = useParams();
   const [openDescriptionId, setOpenDescriptionId] = useState(null);
-  const [openMenuId, setOpenMenuId] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, isRightSide: false });
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('ALL');
+  const [selectedInfluencers, setSelectedInfluencers] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+
+  const [isPaying, setIsPaying] = useState(false);
+
+  const [web3, setWeb3] = useState(null);
+  const [contract, setContract] = useState(null);
   
   const { authenticatedFetch, isLoggedIn, getToken } = useUser();
 
-  // 인플루언서 목록 가져오기
-  const fetchInfluencers = async () => {
+  // 인플루언서 목록 가져오기 - 백엔드에서 필터링
+  const fetchInfluencers = async (statusFilter = 'ALL') => {
     try {
       setIsLoading(true);
       setError(null);
       
+      // API 파라미터 구성
+      const params = new URLSearchParams();
+      if (statusFilter !== 'ALL') {
+        params.append('status', statusFilter);
+      }
+      // 기본 정렬은 latest
+      params.append('sort', 'latest');
+      
+      const apiUrl = `${API_BASE_URL}/advertiser/contract/${adId}/influencers${params.toString() ? `?${params.toString()}` : ''}`;
+      
       console.log('📋 인플루언서 목록 요청:', adId);
-      console.log('📋 API URL:', `${API_BASE_URL}/advertiser/contract/${adId}/influencers`);
+      console.log('📋 API URL:', apiUrl);
+      console.log('📋 필터:', statusFilter);
       console.log('📋 인증 토큰 존재:', !!getToken());
       
-      const response = await authenticatedFetch(`${API_BASE_URL}/advertiser/contract/${adId}/influencers`);
+      const response = await authenticatedFetch(apiUrl);
       
       console.log('📋 응답 상태:', response.status);
       console.log('📋 응답 헤더:', response.headers);
@@ -41,100 +62,6 @@ const AdvertiserMembers = () => {
       const responseData = await response.json();
       console.log('📋 인플루언서 데이터:', responseData);
       
-      // // 실제 API 데이터 대신 더미 데이터 사용
-      // const dummyInfluencers = [
-      //   // 승인됨, URL 제출됨, 리뷰 가능, 문의 가능, 입금 가능
-      //   {
-      //     joinId: 'dummy1',
-      //     influencer_name: '인플루언서 A',
-      //     review_status: 'approved',
-      //     influencer_description: 'AI 통과, 승인된 상태',
-      //     url: 'http://example.com',
-      //     review_available: false,
-      //     submit_review_available: false,
-      //     submit_reward_available: true,
-      //     keywordTest: true,
-      //     conditionTest: true,
-      //     reward_paid: false,
-      //   },
-        
-      //   // 승인됨, URL 제출됨, 리뷰 가능, 문의 가능, 입금 가능(보상지급 이미 완료)
-      //   {
-      //     joinId: 'dummy2',
-      //     influencer_name: '인플루언서 B',
-      //     review_status: 'approved',
-      //     influencer_description: 'AI 통과, 승인된 상태, 이미 입금 완료',
-      //     url: 'http://example.com',
-      //     review_available: true,
-      //     submit_review_available: true,
-      //     submit_reward_available: true,
-      //     keywordTest: true,
-      //     conditionTest: true,
-      //     reward_paid: true,
-      //   },
-
-      //   // 거절됨, URL 제출됨, 리뷰 가능, 문의 불가능, 입금 가능
-      //   {
-      //     joinId: 'dummy3',
-      //     influencer_name: '인플루언서 C',
-      //     review_status: 'rejected',
-      //     influencer_description: 'AI 불통과, 거절 상태',
-      //     url: 'http://example.com',
-      //     review_available: true,
-      //     submit_review_available: false,
-      //     submit_reward_available: true,
-      //     keywordTest: false,
-      //     conditionTest: false,
-      //     reward_paid: false,
-      //   },
-
-      //   // 검토중, URL 제출됨, 리뷰 가능, 문의 불가능, 입금 불가능
-      //   {
-      //     joinId: 'dummy4',
-      //     influencer_name: '인플루언서 D',
-      //     review_status: 'pending',
-      //     influencer_description: 'AI 검사 진행 중',
-      //     url: 'http://example.com',
-      //     review_available: true,
-      //     submit_review_available: false,
-      //     submit_reward_available: false,
-      //     keywordTest: null,
-      //     conditionTest: null,
-      //     reward_paid: false,
-      //   },
-
-      //   // 검토중, URL 미제출, 리뷰 가능, 문의 불가능, 입금 불가능
-      //   {
-      //     joinId: 'dummy5',
-      //     influencer_name: '인플루언서 E',
-      //     review_status: 'pending',
-      //     influencer_description: 'URL 미제출 상태',
-      //     url: '',
-      //     review_available: true,
-      //     submit_review_available: false,
-      //     submit_reward_available: false,
-      //     keywordTest: null,
-      //     conditionTest: null,
-      //     reward_paid: false,
-      //   },
-
-      //   // 승인됨, URL 제출됨, 리뷰 불가능(기간 만료), 문의 불가능, 입금 불가능(기간 만료)
-      //   {
-      //     joinId: 'dummy6',
-      //     influencer_name: '인플루언서 F',
-      //     review_status: 'approved',
-      //     influencer_description: '기간 만료로 문의 및 보상 불가능',
-      //     url: 'http://example.com',
-      //     review_available: false,
-      //     submit_review_available: false,
-      //     submit_reward_available: false,
-      //     keywordTest: true,
-      //     conditionTest: true,
-      //     reward_paid: false,
-      //   },
-      // ];
-      
-      // setData({ influencers: dummyInfluencers });
       setData(responseData);
       
     } catch (err) {
@@ -146,11 +73,36 @@ const AdvertiserMembers = () => {
     }
   };
 
+  // 💡 변경됨: useEffect로 Web3 초기화
+  useEffect(() => {
+    const initWeb3 = async () => {
+      try {
+        const providerUrl = process.env.REACT_APP_WEB3_PROVIDER_URL || 'http://127.0.0.1:8545';
+        const networkId = process.env.REACT_APP_NETWORK_ID || '1337';
+        const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS || AdContract.networks[networkId]?.address;
+
+        const web3Instance = new Web3(providerUrl);
+        const contractInstance = new web3Instance.eth.Contract(AdContract.abi, contractAddress);
+
+        setWeb3(web3Instance);
+        setContract(contractInstance);
+
+        console.log('✅ Web3 연결 완료');
+      } catch (error) {
+        console.error('🚨 Web3 초기화 실패:', error);
+      }
+    };
+
+    initWeb3();
+  }, []);
+
+
+  // 초기 로드
   useEffect(() => {
     console.log('🔍 useEffect 실행:', { adId, isLoggedIn, hasToken: !!getToken() });
     
     if (adId && isLoggedIn && getToken()) {
-      fetchInfluencers();
+      fetchInfluencers(filter);
     } else if (!isLoggedIn) {
       setError('로그인이 필요합니다.');
       setIsLoading(false);
@@ -163,25 +115,61 @@ const AdvertiserMembers = () => {
     }
   }, [adId, isLoggedIn, getToken]);
 
-  const toggleDescription = (id) => {
-    setOpenDescriptionId(prev => (prev === id ? null : id));
-  };
-
-  const toggleMenu = (id) => {
-    setOpenMenuId(prev => (prev === id ? null : id));
-  };
-
-  // 메뉴 외부 클릭 시 닫기
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setOpenMenuId(null);
-    };
-    
-    if (openMenuId) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+  // 필터 변경 시 새로운 데이터 요청
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    setSelectedInfluencers(new Set());
+    setSelectAll(false);
+    if (adId && isLoggedIn && getToken()) {
+      fetchInfluencers(newFilter);
     }
-  }, [openMenuId]);
+  };
+
+  const toggleDescription = (id, event) => {
+    if (openDescriptionId === id) {
+      setOpenDescriptionId(null);
+    } else {
+      setOpenDescriptionId(id);
+      // 클릭한 버튼의 위치 저장
+      const rect = event.currentTarget.getBoundingClientRect();
+      const isRightSide = rect.left > window.innerWidth / 2;
+      setTooltipPosition({
+        top: rect.bottom + window.scrollY + 8,
+        left: isRightSide ? rect.left + window.scrollX - 200 : rect.left + window.scrollX - 20,
+        isRightSide: isRightSide
+      });
+    }
+  };
+
+  // 전체 선택/해제
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedInfluencers(new Set());
+    } else {
+      const availableInfluencers = filteredInfluencers
+        .filter(inf => inf.submit_reward_available)
+        .map(inf => inf.joinId);
+      setSelectedInfluencers(new Set(availableInfluencers));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  // 개별 선택/해제
+  const handleSelectInfluencer = (joinId) => {
+    const newSelected = new Set(selectedInfluencers);
+    if (newSelected.has(joinId)) {
+      newSelected.delete(joinId);
+    } else {
+      newSelected.add(joinId);
+    }
+    setSelectedInfluencers(newSelected);
+    
+    // 전체 선택 상태 업데이트
+    const availableInfluencers = filteredInfluencers
+      .filter(inf => inf.submit_reward_available)
+      .map(inf => inf.joinId);
+    setSelectAll(availableInfluencers.length > 0 && availableInfluencers.every(id => newSelected.has(id)));
+  };
 
   //문의버튼
   const handleInquiry = (influencer) => {
@@ -189,199 +177,340 @@ const AdvertiserMembers = () => {
     alert(`${influencer.influencer_name}님에게 문의를 보냅니다.`);
   };
 
-  //입금버튼
-  const handlePayment = (influencer) => {
-    console.log('입금하기:', influencer);
-    alert(`${influencer.influencer_name}님에게 보상을 지급합니다.`);
-  };
+  const handlePayment = async () => {
+    if (!web3 || !contract) {
+      alert('Web3 또는 스마트컨트랙트가 초기화되지 않았습니다.');
+      return;
+    }
 
-  const isRightEdgeCard = (index) => {
-    const screenWidth = window.innerWidth;
-    const columnsCount = screenWidth <= 1200 ? 3 : 6;
-    return (index + 1) % columnsCount === 0;
-  };
+    // 🔍 디버깅: smartContractId 값 확인
+    console.log('🔍 data:', data);
+    console.log('🔍 smartContractId:', data?.smartContractId);
+    console.log('🔍 smartContractId 타입:', typeof data?.smartContractId);
+    console.log('🔍 Number(smartContractId):', Number(data?.smartContractId));
 
-  const getFilteredInfluencers = () => {
-    if (!data?.influencers) return [];
-    
-    switch (filter) {
-      case 'submitted':
-        return data.influencers.filter(inf => inf.url);
-      case 'not_submitted':
-        return data.influencers.filter(inf => !inf.url);
-      case 'approved':
-        return data.influencers.filter(inf => inf.review_status === 'approved');
-      case 'rejected':
-        return data.influencers.filter(inf => inf.review_status === 'rejected');
-      case 'pending':
-        return data.influencers.filter(inf => inf.review_status === 'pending');
-      default:
-        return data.influencers;
+    if (data?.smartContractId === undefined || data?.smartContractId === null || isNaN(Number(data.smartContractId))) {
+      alert(`유효하지 않은 스마트컨트랙트 ID입니다: ${data?.smartContractId}`);
+      return;
+    }
+
+    setIsPaying(true);
+
+    try {
+      const selected = filteredInfluencers.filter(inf =>
+        selectedInfluencers.has(inf.joinId) && inf.submit_reward_available && !inf.reward_paid
+      );
+
+      if (selected.length === 0) {
+        alert('입금할 대상이 없습니다.');
+        return;
+      }
+
+      let account;
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        account = accounts[0];
+      } else {
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0];
+      }
+
+      const successfulPayments = [];
+      const failedResults = [];
+
+      for (const inf of selected) {
+        try {
+          console.log(`💳 ${inf.influencer_name} 지급 시도:`, {
+            smartContractId: data.smartContractId,
+            walletAddress: inf.influencer_walletAddress,
+            from: account
+          });
+
+          await contract.methods.payInfluencer(Number(data.smartContractId), inf.influencer_walletAddress).send({
+            from: account,
+            gas: 300000
+          });
+
+          const paidAt = new Date().toISOString();
+          successfulPayments.push({ 
+            joinId: inf.joinId, 
+            paidAt: paidAt 
+          });
+          console.log(`✅ 지급 성공: ${inf.influencer_name}`);
+        } catch (error) {
+          console.error(`❌ 지급 실패: ${inf.influencer_name}`, error);
+          failedResults.push(inf.influencer_name);
+        }
+      }
+
+      // 백엔드에 성공한 보상 결과 전송 - 새로운 형식으로
+      if (successfulPayments.length > 0) {
+        const paymentData = {
+          joinIds: successfulPayments
+        };
+
+        console.log('💳 전송할 결제 데이터:', paymentData);
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/advertiser/contract/${adId}/pay`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify(paymentData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('💳 백엔드 업데이트 실패:', errorData);
+          throw new Error(`백엔드 업데이트 실패: ${errorData.message || '알 수 없는 오류'}`);
+        }
+
+        console.log('✅ 백엔드에 결제 결과 업데이트 완료');
+      }
+
+      // 사용자 알림
+      if (failedResults.length > 0) {
+        alert(`⚠️ 일부 인플루언서에게 지급 실패:\n${failedResults.join(', ')}`);
+      } else {
+        alert('✅ 모든 인플루언서에게 성공적으로 지급되었습니다.');
+      }
+
+      fetchInfluencers(filter); // 상태 새로고침
+
+    } catch (err) {
+      console.error('🚨 전체 지급 오류:', err);
+      alert(`입금 처리 중 오류 발생: ${err.message}`);
+    } finally {
+      setIsPaying(false); // ✅ 무조건 종료 시 로딩 false
     }
   };
 
-  const filteredInfluencers = getFilteredInfluencers();
 
-  if (isLoading) {
-    return (
-      <Container>
-        <LoadingMessage>
-          <LoadingSpinner />
-          인플루언서 정보를 불러오는 중...
-          </LoadingMessage>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container>
-        <ErrorMessage>
-          {error}
-          <br />
-          <button 
-            onClick={fetchInfluencers}
-            style={{
-              marginTop: '10px',
-              padding: '8px 16px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            다시 시도
-          </button>
-        </ErrorMessage>
-      </Container>
-    );
-  }
-
-  if (!data) {
-    return (
-      <Container>
-        <ErrorMessage>인플루언서 정보를 찾을 수 없습니다.</ErrorMessage>
-      </Container>
-    );
-  }
+  // 필터링 로직 제거 - 백엔드에서 처리하므로 data.influencers 그대로 사용
+  const filteredInfluencers = data?.influencers || [];
 
   return (
     <Container>
       <Header>
         <Title>
-          광고 참여자 <span>{data.influencers?.length || 0}명</span>
+          광고 참여자 <span>{data?.influencers?.length || 0}명</span>
         </Title>
-        <FilterSelect value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="all">전체</option>
-          <option value="submitted">링크 제출 완료</option>
-          <option value="not_submitted">미제출</option>
-          <option value="approved">승인됨</option>
-          <option value="rejected">거절됨</option>
-          <option value="pending">검토중</option>
-        </FilterSelect>
+        <HeaderRight>
+        <PaymentButton 
+          onClick={handlePayment}
+          disabled={isPaying || selectedInfluencers.size === 0}
+        >
+          {isPaying ? (
+            <>
+              입금 중...
+            </>
+          ) : (
+            <>입금하기 ({selectedInfluencers.size})</>
+          )}
+        </PaymentButton>
+          <FilterSelect value={filter} onChange={(e) => handleFilterChange(e.target.value)}>
+            <option value="ALL">전체</option>
+            <option value="PENDING">미제출</option>
+            <option value="APPROVED">승인됨</option>
+            <option value="REJECTED">거절됨</option>
+          </FilterSelect>
+        </HeaderRight>
       </Header>
 
-      <Grid>
-        {filteredInfluencers.map((influencer, index) => (
-          <CardWrapper key={influencer.joinId}>
-            <Card>
-              <TopArea>
-                <NameRow>
-                  <NameContainer>
-                    <StatusDot status={influencer.review_status} />
-                    <InfluencerName title={influencer.influencer_name}>
-                      {influencer.influencer_name}
-                    </InfluencerName>
-                  </NameContainer>
-                  
-                  <ButtonContainer>
-                    {/* 입금 버튼 */}
-                    {influencer.submit_reward_available && (
-                      <PaymentButton onClick={() => handlePayment(influencer)}>
-                        입금
-                      </PaymentButton>
-                    )}
-                    
-                    {/* 문의버튼튼 */}
-                    {influencer.submit_review_available && (
-                      <div style={{ position: 'relative' }}>
-                        <MenuButton 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleMenu(influencer.joinId);
-                          }}
-                        >
-                          <FaEllipsisV size={12} color="#666" />
-                        </MenuButton>
-                        
-                        {openMenuId === influencer.joinId && (
-                          <DropdownMenu>
-                            <MenuItem onClick={() => {
-                              handleInquiry(influencer);
-                              setOpenMenuId(null);
-                            }}>
-                              문의
-                            </MenuItem>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    )}
-                  </ButtonContainer>
-                </NameRow>
-                
-                <DescriptionToggle
-                  active={openDescriptionId === influencer.joinId}
-                  onClick={() => toggleDescription(influencer.joinId)}
-                >
-                  설명
-                  <ChevronIcon active={openDescriptionId === influencer.joinId}>
-                    <FaChevronDown size={12} color={openDescriptionId === influencer.joinId ? '#000' : '#888'} />
-                  </ChevronIcon>
-                </DescriptionToggle>
-              </TopArea>
+      <TableContainer>
+        {/* 고정 헤더 */}
+        <HeaderTable>
+          <TableHeader>
+            <HeaderRow>
+              <HeaderCell width="50px">
+                <Checkbox
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={handleSelectAll}
+                  disabled={isLoading}
+                />
+              </HeaderCell>
+              <HeaderCell width="200px">참여자명</HeaderCell>
+              <HeaderCell width="100px" textAlign="center">url</HeaderCell>
+              <HeaderCell width="100px" textAlign="center">입금여부</HeaderCell>
+              <HeaderCell width="100px" textAlign="center">문의하기</HeaderCell>
+            </HeaderRow>
+          </TableHeader>
+        </HeaderTable>
 
-              <BottomArea disabled={!influencer.url}>
-                <UrlButton
-                  href={influencer.url || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  disabled={!influencer.url}
-                >
-                  {influencer.url ? 'url 바로가기' : '-'}
-                </UrlButton>
-              </BottomArea>
-            </Card>
-            
-            {openDescriptionId === influencer.joinId && (
-              <DescriptionBox isRightEdge={isRightEdgeCard(index)}>
-                {influencer.influencer_description}
-              </DescriptionBox>
-            )}
-          </CardWrapper>
-        ))}
-      </Grid>
-      
-      {data.influencers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-          참여자가 없습니다.
-        </div>
-      ) : filteredInfluencers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-          해당 조건에 맞는 참여자가 없습니다.
-        </div>
-      ) : null}
+        {/* 스크롤 가능한 바디 */}
+        <ScrollBody>
+          <BodyTable>
+            <TableBody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="5">
+                    <LoadingMessage>
+                      <LoadingSpinner />
+                      인플루언서 정보를 불러오는 중...
+                    </LoadingMessage>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan="5">
+                    <ErrorMessage>
+                      {error}
+                      <br />
+                      <button 
+                        onClick={() => fetchInfluencers(filter)}
+                        style={{
+                          marginTop: '10px',
+                          padding: '8px 16px',
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        다시 시도
+                      </button>
+                    </ErrorMessage>
+                  </td>
+                </tr>
+              ) : !data ? (
+                <tr>
+                  <td colSpan="5">
+                    <ErrorMessage>인플루언서 정보를 찾을 수 없습니다.</ErrorMessage>
+                  </td>
+                </tr>
+              ) : data.influencers.length === 0 ? (
+                <tr>
+                  <td colSpan="5">
+                    <EmptyMessage>참여자가 없습니다.</EmptyMessage>
+                  </td>
+                </tr>
+              ) : filteredInfluencers.length === 0 ? (
+                <tr>
+                  <td colSpan="5">
+                    <EmptyMessage>해당 조건에 맞는 참여자가 없습니다.</EmptyMessage>
+                  </td>
+                </tr>
+              ) : (
+                filteredInfluencers.map((influencer) => (
+                  <React.Fragment key={influencer.joinId}>
+                    <TableRow>
+                      <TableCell width="50px">
+                        <Checkbox
+                          type="checkbox"
+                          checked={selectedInfluencers.has(influencer.joinId)}
+                          onChange={() => handleSelectInfluencer(influencer.joinId)}
+                          disabled={!influencer.submit_reward_available}
+                        />
+                      </TableCell>
+                      <TableCell width="200px">
+                        <NameContainer>
+                          <StatusDot status={influencer.review_status} />
+                          <InfluencerName>{influencer.influencer_name}</InfluencerName>
+                          <DescriptionToggle
+                            onClick={(e) => toggleDescription(influencer.joinId, e)}
+                            active={openDescriptionId === influencer.joinId}
+                          >
+                            <FaChevronDown 
+                              size={12} 
+                              color="#888"
+                              style={{
+                                transform: openDescriptionId === influencer.joinId ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease'
+                              }}
+                            />
+                          </DescriptionToggle>
+                        </NameContainer>
+                      </TableCell>
+                      <TableCell width="100px" textAlign="center">
+                        {influencer.url ? (
+                          <UrlLink
+                            href={influencer.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            url
+                          </UrlLink>
+                        ) : (
+                          <DisabledText>-</DisabledText>
+                        )}
+                      </TableCell>
+                      <TableCell width="100px" textAlign="center">
+                        {influencer.reward_paid ? (
+                          <CompletedText>완료</CompletedText>
+                        ) : (
+                          <DisabledText>-</DisabledText>
+                        )}
+                      </TableCell>
+                      <TableCell width="100px" textAlign="center">
+                        {influencer.submit_review_available ? (
+                          <InquiryButton onClick={() => handleInquiry(influencer)}>
+                            문의
+                          </InquiryButton>
+                        ) : (
+                          <DisabledText>-</DisabledText>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                ))
+              )}
+            </TableBody>
+          </BodyTable>
+        </ScrollBody>
+      </TableContainer>
+
+      {/* Description 툴팁 */}
+      {openDescriptionId && (
+        <>
+          <TooltipOverlay onClick={() => setOpenDescriptionId(null)} />
+          <TooltipContent 
+            style={{
+              top: `${tooltipPosition.top}px`,
+              left: `${tooltipPosition.left}px`
+            }}
+          >
+            {filteredInfluencers.find(inf => inf.joinId === openDescriptionId)?.influencer_description || '설명이 없습니다.'}
+          </TooltipContent>
+        </>
+      )}
     </Container>
   );
 };
 
 export default AdvertiserMembers;
 
+// 툴팁 스타일
+const TooltipOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+`;
+
+const TooltipContent = styled.div`
+  position: absolute;
+  background-color: rgb(162, 171, 180);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  z-index: 1000;
+  min-width: 210px;
+  max-width: 300px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+`;
+
+// 컴포넌트 스타일
 const Container = styled.div`
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
 `;
 
 const Header = styled.div`
@@ -401,121 +530,127 @@ const Title = styled.h2`
   }
 `;
 
-const FilterSelect = styled.select`
-  padding: 8px 12px;
-  font-size: 14px;
-  border: none;
-  border-radius: 8px;
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
 `;
 
-const Grid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 20px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(3, 1fr);
+const PaymentButton = styled.button`
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background-color: #0056b3;
+  }
+  
+  &:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 `;
 
-const Card = styled.div`
-  background-color: #fff;
-  border-radius: 20px;
-  overflow: hidden; 
+const FilterSelect = styled.select`
+  padding: 8px 20px;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  background-color: white;
+`;
+
+const TableContainer = styled.div`
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 120px;
-  padding: 0; 
 `;
 
-const TopArea = styled.div`
+const HeaderTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background-color: white;
+`;
+
+const ScrollBody = styled.div`
+  overflow-y: auto;
+  max-height: calc(100vh - 220px);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #ddd;
+    border-radius: 3px;
+  }
+`;
+
+const BodyTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+`;
+
+const TableHeader = styled.thead`
+  position: sticky;
+  top: 0;
+  z-index: 1;
+`;
+
+const TableBody = styled.tbody``;
+
+const HeaderRow = styled.tr``;
+
+const TableRow = styled.tr`
+  border-bottom: 1px solid #f0f0f0;
+  
+  &:hover {
+    background-color: #f8f9fa;
+  }
+`;
+
+const HeaderCell = styled.th`
   padding: 16px;
+  text-align: ${props => props.textAlign || 'left'};
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  width: ${props => props.width || 'auto'};
+  border-bottom: 1px solid #eee;
 `;
 
-const CardWrapper = styled.div`
-  position: relative;
-`;
-
-const BottomArea = styled.div`
-  border-radius: 0 0 10px 10px;
-  overflow: hidden;
-  background-color: ${({ disabled }) => (disabled ? '#ddd' : '#e0f0ff')};
-`;
-
-const NameRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 15px;
-  font-weight: bold;
-  margin-bottom: 4px;
+const TableCell = styled.td`
+  padding: 16px;
+  vertical-align: middle;
+  font-size: 14px;
+  width: ${props => props.width || 'auto'};
+  border-bottom: 1px solid #f0f0f0;
+  text-align: ${props => props.textAlign || 'left'};
 `;
 
 const NameContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0; 
-`;
-
-const InfluencerName = styled.span`
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 80px; 
-`;
-
-const MenuButton = styled.button`
-  background: none;
-  border: none;
+  gap: 8px;
   cursor: pointer;
+  width: 100%;
   padding: 4px;
   border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: background-color 0.2s ease;
   
   &:hover {
     background-color: #f0f0f0;
-  }
-`;
-
-const DropdownMenu = styled.div`
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  min-width: 80px;
-`;
-
-const MenuItem = styled.button`
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font-size: 12px;
-  
-  &:hover {
-    background-color: #f0f0f0;
-  }
-  
-  &:first-child {
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
-  }
-  
-  &:last-child {
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
   }
 `;
 
@@ -524,89 +659,85 @@ const StatusDot = styled.div`
   height: 8px;
   border-radius: 50%;
   background-color: ${({ status }) => {
-    if (status === 'approved') return '#28a745'; // 승인 - 초록색
-    if (status === 'rejected') return '#dc3545'; // 거절 - 빨간색    
+    if (status === 'APPROVED') return '#28a745'; // 승인 - 초록색
+    if (status === 'REJECTED') return '#dc3545'; // 거절 - 빨간색    
     return '#6c757d'; // 대기 - 회색                              
   }};
+  flex-shrink: 0;
+`;
+
+const InfluencerName = styled.span`
+  font-weight: 500;
+  color: #333;
 `;
 
 const DescriptionToggle = styled.div`
-  font-size: 14px;
-  color: ${({ active }) => (active ? '#000' : '#888')};
+  background: none;
+  border: none;
   cursor: pointer;
-  margin-bottom: 8px;
+  padding: 2px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  user-select: none;
+  justify-content: center;
+  margin-left: 4px;
+  
+  &:hover {
+    background-color: #e9ecef;
+    border-radius: 4px;
+  }
 `;
 
-const ChevronIcon = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const DescriptionBox = styled.div`
-  position: absolute;
-  top: 40%;
-  left: ${({ isRightEdge }) => (isRightEdge ? '-100px' : '-20px')};
-  margin-top: 6px;
-  background-color: rgb(162, 171, 180);
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  line-height: 1.4;
-  z-index: 10;
-  min-width: 210px;
-`;
-
-const UrlButton = styled.a`
-  display: block;
-  text-align: center;
-  padding: 10px;
-  border-radius: 0;
-  background-color: transparent;
-  color: ${({ disabled }) => (disabled ? '#777' : '#0077cc')};
-  font-weight: bold;
-  font-size: 14px;
+const UrlLink = styled.a`
+  color: #0077cc;
   text-decoration: none;
-  pointer-events: ${({ disabled }) => (disabled ? 'none' : 'auto')};
+  font-weight: 500;
+  
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
-const ButtonContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  position: relative;
+const DisabledText = styled.span`
+  color: #999;
+`;
+
+const CompletedText = styled.span`
+  color: #28a745;
+  font-weight: 500;
 `;
 
 const InquiryButton = styled.button`
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 6px;
+  padding: 6px 12px;
   font-size: 12px;
   color: #495057;
   cursor: pointer;
+  font-weight: 500;
   
   &:hover {
     background-color: #e9ecef;
+    border-color: #c6c8ca;
   }
 `;
 
-const PaymentButton = styled.button`
-  font-weight: bold;
-  background-color:rgb(158, 183, 164);
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
-  color: white;
+const Checkbox = styled.input`
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   
-  &:hover {
-    background-color:rgb(121, 156, 128);
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
+`;
+
+const EmptyMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 14px;
 `;
 
 const LoadingMessage = styled.div`

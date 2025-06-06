@@ -19,7 +19,8 @@ const AdvertiserCreate = () => {
   const [photoRequired, setPhotoRequired] = useState(false);
   const [photoCount, setPhotoCount] = useState('');
   const [uploadSite, setUploadSite] = useState('네이버 블로그');
-  const [productImages, setProductImages] = useState([]); // 제품 사진 상태 추가
+  const [productImageFile, setProductImageFile] = useState(null); // 선택된 이미지 파일
+  const [productImagePreview, setProductImagePreview] = useState(''); // 미리보기 URL
   const [conditionErrors, setConditionErrors] = useState([]); // 세부 조건 에러 상태
 
   const [formData, setFormData] = useState({
@@ -175,20 +176,31 @@ const AdvertiserCreate = () => {
     setPhotoRequired(e.target.checked);
     if (!e.target.checked) {
       setPhotoCount('');
-      setProductImages([]); // 사진 체크 해제시 업로드된 이미지도 초기화
+      setProductImageFile(null); // 사진 체크 해제시 파일도 초기화
+      setProductImagePreview('');
     }
   };
 
-  // 제품 사진 업로드 핸들러
+  // 제품 사진 선택 핸들러 (파일만 저장, 업로드는 나중에)
   const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const imageUrls = files.map(file => URL.createObjectURL(file));
-    setProductImages(prev => [...prev, ...imageUrls]);
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // 파일 저장
+    setProductImageFile(file);
+    
+    // 미리보기용 로컬 URL 생성
+    const previewUrl = URL.createObjectURL(file);
+    setProductImagePreview(previewUrl);
   };
 
   // 제품 사진 삭제 핸들러
-  const handleImageDelete = (indexToDelete) => {
-    setProductImages(prev => prev.filter((_, index) => index !== indexToDelete));
+  const handleImageDelete = () => {
+    if (productImagePreview) {
+      URL.revokeObjectURL(productImagePreview);
+    }
+    setProductImageFile(null);
+    setProductImagePreview('');
   };
 
   const handleInputChange = (e) => {
@@ -257,7 +269,7 @@ const AdvertiserCreate = () => {
     }
 
     // 사진 필수 선택시 제품 사진 업로드 검사
-    if (photoRequired && productImages.length === 0) {
+    if (photoRequired && !productImageFile) {
       alert('필수 매체에서 사진을 선택하셨습니다. 제품 사진을 업로드해주세요.');
       return;
     }
@@ -302,12 +314,35 @@ const AdvertiserCreate = () => {
     }
   };
 
+  // 이미지를 서버에 업로드하는 함수 (토큰 불필요)
+  const uploadImageToServer = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/image`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('이미지 업로드 실패');
+      }
+
+      const result = await response.json();
+      return result.imageUrl;
+    } catch (error) {
+      console.error('이미지 업로드 오류:', error);
+      throw error;
+    }
+  };
+
   const handlePayment = async () => {
     setLoading(true);
     
     try {
       const account = await connectWallet();
-      const totalAmount = parseFloat(formData.reward) * parseInt(formData.maxInfluencer);
+      const totalAmount = Math.round((parseFloat(formData.reward) * parseInt(formData.maxInfluencer)) * 1e8) / 1e8;
       
       const balance = await web3.eth.getBalance(account);
       const balanceInEth = parseFloat(web3.utils.fromWei(balance, 'ether'));
@@ -319,6 +354,13 @@ const AdvertiserCreate = () => {
         return;
       }
 
+      // 🔥 제품 이미지가 있으면 먼저 업로드
+      let productImageUrl = '';
+      if (photoRequired && productImageFile) {
+        productImageUrl = await uploadImageToServer(productImageFile);
+        console.log('이미지 업로드 성공:', productImageUrl);
+      }
+
       // 메타데이터 생성 -> 이후 해시화
       const metadata = {
         keywords: tags,
@@ -328,7 +370,7 @@ const AdvertiserCreate = () => {
         photoRequired,
         photoCount: photoRequired ? photoCount : '',
         uploadSite,
-        productImages: photoRequired ? productImages : []
+        productImageUrl: productImageUrl // 업로드된 URL 사용
       };
       
       const metadataString = JSON.stringify(metadata);
@@ -352,6 +394,10 @@ const AdvertiserCreate = () => {
 
       console.log('트랜잭션 성공:', tx);
 
+      const currentNextId = await contract.methods.nextAdId().call();
+      const smartContractAdId = parseInt(currentNextId) - 1;
+      console.log('생성된 스마트 컨트랙트 Ad ID:', smartContractAdId);
+
       const apiData = {
         title: formData.adName, 
         reward: parseFloat(formData.reward),
@@ -374,7 +420,7 @@ const AdvertiserCreate = () => {
               uploadSite === '인스타그램' ? 'Instagram' : 
               uploadSite === '유튜브' ? 'YouTube' : uploadSite,
         
-        // 🔥 이 부분을 수정하세요!
+        // 미디어 정보
         ...((textRequired && textLength && parseInt(textLength) > 0) || 
             (photoRequired && photoCount && parseInt(photoCount) > 0)) && {
           media: {
@@ -388,7 +434,8 @@ const AdvertiserCreate = () => {
         },
         
         ...(formData.description.trim() && { description: formData.description }),
-        ...(photoRequired && productImages.length > 0 && { productImages }),
+        ...(photoRequired && productImageUrl && { photo_url: productImageUrl }),
+        smartContractId: smartContractAdId,
         transactionHash: tx.transactionHash,
         advertiserAddress: account
       };
@@ -440,7 +487,7 @@ const AdvertiserCreate = () => {
   };
 
   const totalAmount = formData.reward && formData.maxInfluencer ? 
-    parseFloat(formData.reward) * parseInt(formData.maxInfluencer) : 0;
+    Math.round((parseFloat(formData.reward) * parseInt(formData.maxInfluencer)) * 1e8) / 1e8 : 0;
 
   // 임시 지갑 주소 (실제로는 로그인된 사용자 정보에서)
   const userWalletAddress = accounts[0] || 'MetaMask 연결 필요';
@@ -678,7 +725,7 @@ const AdvertiserCreate = () => {
             </ContentArea>
           </Row>
 
-          {/* 제품 사진 업로드 섹션 */}
+          {/* 제품 사진 업로드 섹션 (단일 이미지) */}
           {photoRequired && (
             <Row>
               <Label>제품 사진<RequiredMark>*</RequiredMark></Label>
@@ -687,25 +734,22 @@ const AdvertiserCreate = () => {
                   <ImageUploadInput
                     type="file"
                     accept="image/*"
-                    multiple
                     onChange={handleImageUpload}
-                    id="product-images"
+                    id="product-image"
                   />
-                  <ImageUploadLabel htmlFor="product-images">
+                  <ImageUploadLabel htmlFor="product-image">
                     사진 업로드
                   </ImageUploadLabel>
                 </ImageUploadContainer>
                 
-                {productImages.length > 0 && (
+                {productImagePreview && (
                   <ImagePreviewContainer>
-                    {productImages.map((image, index) => (
-                      <ImagePreviewItem key={index}>
-                        <PreviewImage src={image} alt={`제품 사진 ${index + 1}`} />
-                        <ImageDeleteButton onClick={() => handleImageDelete(index)}>
-                          ✕
-                        </ImageDeleteButton>
-                      </ImagePreviewItem>
-                    ))}
+                    <ImagePreviewItem>
+                      <PreviewImage src={productImagePreview} alt="제품 사진" />
+                      <ImageDeleteButton onClick={handleImageDelete}>
+                        ✕
+                      </ImageDeleteButton>
+                    </ImagePreviewItem>
                   </ImagePreviewContainer>
                 )}
               </ContentArea>
@@ -784,7 +828,7 @@ const AdvertiserCreate = () => {
 
 export default AdvertiserCreate;
 
-// 모든 스타일드 컴포넌트는 기존과 동일하므로 생략...
+// 스타일드 컴포넌트들
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -893,12 +937,6 @@ const Input = styled.input`
     background-color: #f5f5f5;
     cursor: not-allowed;
   }
-`;
-
-const TagBox = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 `;
 
 const Tag = styled.div`
