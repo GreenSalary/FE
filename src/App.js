@@ -1,4 +1,4 @@
-// App.js - UserContext와 연결된 버전
+// App.js - ProtectedRoute가 적용된 완전한 버전
 import React from 'react';
 import {
   BrowserRouter as Router,
@@ -28,13 +28,39 @@ import Mypage from './pages/Mypage/Mypage';
 import EditInfo from './pages/Mypage/EditInfo';
 import ChangePwd from './pages/Mypage/ChangePwd';
 
+import AdminLogin from './pages/Admin/AdminLogin';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminList from './pages/Admin/AdminList';
 import AdminDetail from './pages/Admin/AdminDetail';
 
+// ProtectedRoute 컴포넌트
+const ProtectedRoute = ({ children, allowedUserTypes }) => {
+  const { userType, isLoggedIn, isLoading } = useUser();
+
+  // 로딩 중이면 로딩 표시
+  if (isLoading) {
+    return <div>로딩 중...</div>;
+  }
+
+  // 로그인하지 않았으면 홈으로 리다이렉트
+  if (!isLoggedIn) {
+    return <Navigate to="/" replace />;
+  }
+
+  // 허용된 사용자 타입이 아니면 해당 사용자의 홈으로 리다이렉트
+  if (!allowedUserTypes.includes(userType)) {
+    if (userType === 'advertiser') return <Navigate to="/advertiser/home" replace />;
+    if (userType === 'influencer') return <Navigate to="/influencer/home" replace />;
+    if (userType === 'admin') return <Navigate to="/admin/home" replace />;
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
 const App = () => {
   return (
-    <UserProvider> 
+    <UserProvider>
       <Router>
         <AppContent />
       </Router>
@@ -48,19 +74,23 @@ const AppContent = () => {
 
   return (
     <Routes>
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           isLoggedIn ? (
             <Navigate to={getHomePath()} replace />
           ) : (
-            <AuthForm /> 
+            <AuthForm />
           )
-        } 
+        }
       />
 
-      {/* Advertiser Routes */}
-      <Route path="/advertiser" element={<AdvertiserDashboard />}>
+      {/* Advertiser Routes - advertiser만 접근 가능 */}
+      <Route path="/advertiser" element={
+        <ProtectedRoute allowedUserTypes={['advertiser']}>
+          <AdvertiserDashboard />
+        </ProtectedRoute>
+      }>
         <Route index element={<Navigate to="home" replace />} />
         <Route path="home" element={<AdvertiserHome />} />
         <Route path="create" element={<AdvertiserCreate />} />
@@ -72,8 +102,12 @@ const AppContent = () => {
         <Route path="mypage/changepwd" element={<ChangePwd />} />
       </Route>
 
-      {/* Publisher Routes */}
-      <Route path="/publisher" element={<PublisherDashboard />}>
+      {/* Influencer Routes - influencer만 접근 가능 */}
+      <Route path="/influencer" element={
+        <ProtectedRoute allowedUserTypes={['influencer']}>
+          <PublisherDashboard />
+        </ProtectedRoute>
+      }>
         <Route index element={<Navigate to="home" replace />} />
         <Route path="home" element={<PublisherHome />} />
         <Route path="join" element={<PublisherJoin />} />
@@ -84,9 +118,16 @@ const AppContent = () => {
       </Route>
 
       {/* Admin Routes */}
-      <Route path="/admin" element={<AdminDashboard />}>
-        <Route index element={<AdminList />} />                       
-        <Route path=":adId" element={<AdminDetail />} />             
+      <Route path="/admin" element={<AdminLogin />} />
+      
+      {/* Admin Dashboard Routes - admin만 접근 가능 */}
+      <Route path="/admin/home" element={
+        <ProtectedRoute allowedUserTypes={['admin']}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      }>
+        <Route index element={<AdminList />} />
+        <Route path="detail/:adId" element={<AdminDetail />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
