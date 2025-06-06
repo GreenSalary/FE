@@ -95,13 +95,34 @@ const ChangeButton = styled.button`
 
 const StatusInput = styled.div`
   display: flex;
-  gap: 90px;
-  justify-content: center;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const StatusGroup = styled.div`
+  display: flex;
+  gap: 8px;
   align-items: center;
 `;
 
 const Amount = styled.div`
   font-size: 18px;
+`;
+
+const InquiryButton = styled.button`
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #495057;
+  cursor: pointer;
+  font-weight: 500;
+  
+  &:hover {
+    background-color: #e9ecef;
+    border-color: #c6c8ca;
+  }
 `;
 
 const SubTitle = styled.h3`
@@ -314,6 +335,13 @@ const PublisherDetail = () => {
     status: 'not_executed'
   };
 
+  // 문의 버튼 클릭 핸들러
+  const handleInquiry = () => {
+    console.log('문의하기 클릭됨');
+    // 나중에 구현될 문의 기능
+    alert('광고주에게 문의를 보냅니다.');
+  };
+
   // 계약 상세 정보 가져오기
   const fetchContractDetail = async () => {
     try {
@@ -415,7 +443,12 @@ const PublisherDetail = () => {
             <SectionTitle>광고 보수 현황</SectionTitle>
             <StatusInput>
               <Amount>{staticData.amount}원</Amount>
-              <StatusBadge status={staticData.status} />
+              <StatusGroup>
+                <StatusBadge status={staticData.status} />
+                <InquiryButton onClick={handleInquiry}>
+                  문의
+                </InquiryButton>
+              </StatusGroup>
             </StatusInput>
           </TopRight>
         </Top>
