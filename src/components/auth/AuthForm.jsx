@@ -82,29 +82,29 @@ const AuthForm = () => {
   const handleCustomDomainChange = (e) => {
     const value = e.target.value;
     
-    if (validateDomain(value)) {
-      setCustomDomain(value);
-      setEmailError('');
-    } else {
-      setEmailError('유효한 이메일을 작성해주세요.');
-    }
+    setCustomDomain(value);
+    setEmailError(''); 
   };
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     
-    const domain = emailDomain === '직접 입력' ? customDomain : emailDomain;
-    const finalEmail = `${emailId}@${domain}`;
+    // 직접 입력이면 확인하기
+    const finalEmail = emailDomain === '직접 입력' 
+      ? customDomain  
+      : `${emailId}@${emailDomain}`;  
 
-    // 유효성 검사
-    if (!emailId.trim()) return alert('이메일 ID를 입력해주세요.');
+    // 유효성 검사 수정
+    if (emailDomain === '직접 입력') {
+      if (!customDomain.trim()) return alert('이메일을 입력해주세요.');
+      if (!/^\S+@\S+\.\S+$/.test(customDomain)) return alert('유효한 이메일 형식이 아닙니다 (예: user@example.com).');
+    } else {
+      if (!emailId.trim()) return alert('이메일 ID를 입력해주세요.');
+    }
+    
     if (!signupData.name.trim()) return alert('이름을 입력해주세요.');
     if (!signupData.password) return alert('비밀번호를 입력해주세요.');
     if (signupData.password !== signupData.passwordCheck) return alert('비밀번호가 일치하지 않습니다.');
-    if (!/^\S+@\S+\.\S+$/.test(finalEmail)) return alert('유효한 이메일 형식이 아닙니다.');
-    if (emailDomain === '직접 입력' && !customDomain.trim()) {
-      return alert('이메일을 입력해주세요.');
-    }
 
     console.log('🚀 회원가입 시도:', {
       email: finalEmail,
@@ -261,8 +261,8 @@ const AuthForm = () => {
               <RadioInput 
                 type="radio" 
                 name="userType" 
-                value="publisher"
-                checked={userType === 'publisher'} 
+                value="influencer"
+                checked={userType === 'influencer'} 
                 onChange={handleUserTypeChange}
               />
               콘텐츠 제작자
@@ -305,7 +305,7 @@ const AuthForm = () => {
           
           <ButtonContainer>
             <Button type="submit" disabled={isLoading}>
-              SIGN IN
+              로그인
             </Button>
           </ButtonContainer>
           
@@ -335,8 +335,8 @@ const AuthForm = () => {
               <RadioInput 
                 type="radio" 
                 name="userType" 
-                value="publisher"
-                checked={userType === 'publisher'} 
+                value="influencer"
+                checked={userType === 'influencer'} 
                 onChange={handleUserTypeChange}
               />
               콘텐츠 제작자
@@ -365,16 +365,30 @@ const AuthForm = () => {
               </svg>
               <Input
                 type="text"
-                placeholder="이메일 ID"
+                placeholder={emailDomain === '직접 입력' ? ' ' : '이메일 ID'}
                 value={emailId}
                 onChange={handleEmailIdChange}
-                style={{ flex: 1 }}
-                required
+                style={{ 
+                  flex: 1,
+                  opacity: emailDomain === '직접 입력' ? 0.5 : 1,  
+                  cursor: emailDomain === '직접 입력' ? 'not-allowed' : 'text'
+                }}
+                disabled={emailDomain === '직접 입력'}  
+                required={emailDomain !== '직접 입력'}
               />
-              <span style={{ margin: '0 8px', color: '#666', fontSize: '16px' }}>@</span>
+              {emailDomain !== '직접 입력' && (
+                <span style={{ margin: '0 8px', color: '#666', fontSize: '16px' }}>@</span>
+              )}
               <select 
                 value={emailDomain} 
-                onChange={(e) => setEmailDomain(e.target.value)}
+                onChange={(e) => {
+                  setEmailDomain(e.target.value);
+                  if (e.target.value === '직접 입력') {
+                    setEmailId('');  
+                  } else {
+                    setCustomDomain('');  
+                  }
+                }}
                 style={{
                   backgroundColor: 'transparent',
                   border: 'none',
@@ -683,12 +697,23 @@ const InputGroup = styled.div`
   align-items: center;
   background-color: #f6f6f6;
   border-radius: 5px;
-  margin: 6px 0;
+  margin: 8px 0;
   padding: 0 15px;
+  transition: all 0.3s ease;
+  
+  &:focus-within {
+    background-color: #f0f0f0;
+    box-shadow: 0 0 0 2px rgba(0, 203, 164, 0.2);
+  }
   
   svg:first-child {
     color: #aaa;
     margin-right: 10px;
+    transition: color 0.3s ease;
+  }
+  
+  &:focus-within svg:first-child {
+    color: var(--color-primary, #00cbA4);
   }
 `;
 
