@@ -4,11 +4,13 @@ import styled from 'styled-components';
 import Web3 from 'web3';
 import AdContract from '../../contracts/AdContract.json';
 import { FaTrash } from 'react-icons/fa';
+import { useUser } from '../../contexts/UserContext';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const AdvertiserCreate = () => {
   const navigate = useNavigate();
+  const { userInfo } = useUser();
   
   // 기존 상태들
   const [conditions, setConditions] = useState(['']);
@@ -356,7 +358,12 @@ const AdvertiserCreate = () => {
         return;
       }
 
-      // 🔥 제품 이미지가 있으면 먼저 업로드
+      if (!userInfo || !userInfo.id) {
+        throw new Error('로그인 정보를 확인할 수 없습니다.');
+      }
+
+      const userId = userInfo.id;
+
       let productImageUrl = '';
       if (photoRequired && productImageFile) {
         productImageUrl = await uploadImageToServer(productImageFile);
@@ -372,7 +379,7 @@ const AdvertiserCreate = () => {
         photoRequired,
         photoCount: photoRequired ? photoCount : '',
         uploadSite,
-        productImageUrl: productImageUrl // 업로드된 URL 사용
+        productImageUrl: productImageUrl
       };
       
       const metadataString = JSON.stringify(metadata);
@@ -381,8 +388,9 @@ const AdvertiserCreate = () => {
       const deadline = new Date(formData.uploadEndDate + "T23:59:59");
       const deadlineTimestamp = Math.floor(deadline.getTime() / 1000);
 
-      // 스마트 컨트랙트 실행
+      // smart contract
       const tx = await contract.methods.addContract(
+        userId,                                     
         web3.utils.toWei(formData.reward, 'ether'),
         parseInt(formData.maxInfluencer),
         deadlineTimestamp,
@@ -396,9 +404,49 @@ const AdvertiserCreate = () => {
 
       console.log('트랜잭션 성공:', tx);
 
-      const currentNextId = await contract.methods.nextAdId().call();
-      const smartContractAdId = parseInt(currentNextId) - 1;
-      console.log('생성된 스마트 컨트랙트 Ad ID:', smartContractAdId);
+      const receipt = await web3.eth.getTransactionReceipt(tx.transactionHash);
+      let smartContractAdId = null;
+
+      const adCreatedEvent = receipt.logs.find(log => {
+        try {
+          const decoded = web3.eth.abi.decodeLog(
+            [
+              { type: 'uint256', name: 'adId', indexed: true },
+              { type: 'uint256', name: 'advertiserId', indexed: true },
+              { type: 'uint256', name: 'reward' }
+            ],
+            log.data,
+            log.topics
+          );
+          return decoded.adId !== undefined && decoded.advertiserId == userId;
+        } catch (e) {
+          return false;
+        }
+      });
+
+      if (adCreatedEvent) {
+        const decoded = web3.eth.abi.decodeLog(
+          [
+            { type: 'uint256', name: 'adId', indexed: true },
+            { type: 'uint256', name: 'advertiserId', indexed: true },
+            { type: 'uint256', name: 'reward' }
+          ],
+          adCreatedEvent.data,
+          adCreatedEvent.topics
+        );
+        
+        smartContractAdId = parseInt(decoded.adId);
+        
+        console.log('생성된 스마트 컨트랙트 Ad ID:', smartContractAdId);
+        console.log('사용된 Advertiser ID (userId):', userId);
+      } else {
+        const currentNextId = await contract.methods.nextAdId().call();
+        smartContractAdId = parseInt(currentNextId) - 1;
+        
+        console.log('이벤트 파싱 실패, 대체 방법 사용');
+        console.log('생성된 스마트 컨트랙트 Ad ID:', smartContractAdId);
+        console.log('사용된 Advertiser ID (userId):', userId);
+      }
 
       const apiData = {
         title: formData.adName, 
@@ -422,7 +470,7 @@ const AdvertiserCreate = () => {
               uploadSite === '인스타그램' ? 'Instagram' : 
               uploadSite === '유튜브' ? 'YouTube' : uploadSite,
         
-        // 미디어 정보
+
         ...((textRequired && textLength && parseInt(textLength) > 0) || 
             (photoRequired && photoCount && parseInt(photoCount) > 0)) && {
           media: {
@@ -437,9 +485,9 @@ const AdvertiserCreate = () => {
         
         ...(formData.description.trim() && { description: formData.description }),
         ...(photoRequired && productImageUrl && { photo_url: productImageUrl }),
-        smartContractId: smartContractAdId,
-        transactionHash: tx.transactionHash,
-        advertiserAddress: account
+        
+        smartContractId: smartContractAdId,           // 광고 ID
+        transactionHash: tx.transactionHash
       };
 
       console.log('백엔드 API 호출 데이터:', apiData);

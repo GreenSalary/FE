@@ -182,15 +182,12 @@ const EmptyMessage = styled.div`
 // 날짜 포맷팅 함수
 const formatDateTime = (dateString) => {
   if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).replace(/\. /g, '-').replace('.', '').replace(',', '');
+  
+  // Z를 제거해서 로컬 시간으로 처리
+  const localDateString = dateString.replace('Z', '');
+  const date = new Date(localDateString);
+  
+  return date.toLocaleString('ko-KR');
 };
 
 // 금액 포맷팅 함수 (ETH)

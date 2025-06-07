@@ -138,11 +138,11 @@ export const UserProvider = ({ children }) => {
 
       console.log('📋 토큰에서 추출된 정보:', decoded);
 
-      // JWT payload에서 사용자 정보 추출
+      // 🔥 수정: 올바른 변수 사용
       const userInfo = {
         id: decoded.userId || decoded.user_id || 1,
         name: decoded.userName || decoded.user_name || '사용자',
-        email: decoded.email || savedEmail || '', // 토큰의 이메일 또는 저장된 이메일 사용
+        email: decoded.email || savedEmail || '',
         role: decoded.role || 'advertiser'
       };
 
@@ -299,13 +299,14 @@ export const UserProvider = ({ children }) => {
       // 로그인 시 이메일을 localStorage에 저장 (토큰에 이메일이 없을 경우를 대비)
       localStorage.setItem('userEmail', email);
 
-      // API 응답 데이터를 우선 사용하고, 토큰에도 저장된 이메일 정보 활용
-      console.log('📋 API 응답에서 사용자 정보 추출:', data);
+      // 🔥 수정: JWT 토큰에서 userId 추출
+      const decoded = tokenUtils.decodeToken(accessToken);
+      console.log('🔍 로그인시 토큰에서 추출된 정보:', decoded);
 
       const userInfo = {
-        id: data.userId || 1,
-        name: data.user_name || data.name || '사용자',
-        email: email, // 로그인 시 입력한 이메일 사용
+        id: decoded?.userId || 1,                        // ✅ JWT에서 userId 추출
+        name: data.user_name || decoded?.userName || '사용자',
+        email: email,
         role: data.role || selectedUserType
       };
 
@@ -321,7 +322,7 @@ export const UserProvider = ({ children }) => {
         role: normalizedUserType
       });
 
-      console.log('✅ 로그인 상태 업데이트 완료');
+      console.log('✅ 로그인 상태 업데이트 완료:', userInfo);
 
       return { success: true };
       
@@ -362,11 +363,11 @@ export const UserProvider = ({ children }) => {
   };
 
   const getHomePath = () => {
-  if (userType === USER_TYPES.ADVERTISER) return '/advertiser/home';
-  if (userType === USER_TYPES.INFLUENCER) return '/influencer/home';
-  if (userType === USER_TYPES.ADMIN) return '/admin/home'; 
-  return '/';
-};
+    if (userType === USER_TYPES.ADVERTISER) return '/advertiser/home';
+    if (userType === USER_TYPES.INFLUENCER) return '/influencer/home';
+    if (userType === USER_TYPES.ADMIN) return '/admin/home'; 
+    return '/';
+  };
 
   const value = {
     userType,
@@ -376,7 +377,7 @@ export const UserProvider = ({ children }) => {
     
     login,
     logout,
-    updateUserInfo, // 🆕 추가
+    updateUserInfo,
     getHomePath,
     authenticatedFetch,
     

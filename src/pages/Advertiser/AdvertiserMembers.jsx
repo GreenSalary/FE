@@ -245,6 +245,7 @@ const AdvertiserMembers = () => {
     }
   };
 
+  // handlePayment 함수 - ID 기반 지급으로 완전 수정
   const handlePayment = async () => {
     if (!web3 || !contract) {
       alert('Web3 또는 스마트컨트랙트가 초기화되지 않았습니다.');
@@ -286,15 +287,30 @@ const AdvertiserMembers = () => {
       const successfulPayments = [];
       const failedResults = [];
 
+      // 🔥 새로운 ID 기반 지급 방식
       for (const inf of selected) {
         try {
           console.log(`💳 ${inf.influencer_name} 지급 시도:`, {
             smartContractId: data.smartContractId,
-            walletAddress: inf.influencer_walletAddress,
+            influencer_id: inf.influencer_id,    
+            influencer_walletAddress: inf.influencer_walletAddress,
             from: account
           });
 
-          await contract.methods.payInfluencer(Number(data.smartContractId), inf.influencer_walletAddress).send({
+          // 🔥 필수 데이터 확인도 수정
+          if (!inf.influencer_id && inf.influencer_id !== 0) {
+            throw new Error(`${inf.influencer_name}: 인플루언서 ID가 없습니다.`);
+          }
+          if (!inf.influencer_walletAddress) {
+            throw new Error(`${inf.influencer_name}: 지갑 주소가 없습니다.`);
+          }
+
+          // 🔥 새로운 payInfluencer 함수 호출 (adId, influencerId, walletAddress)
+          await contract.methods.payInfluencer(
+            Number(data.smartContractId),           
+            Number(inf.influencer_id),              
+            inf.influencer_walletAddress            
+          ).send({
             from: account,
             gas: 300000
           });
@@ -311,7 +327,7 @@ const AdvertiserMembers = () => {
         }
       }
 
-      // 백엔드에 성공한 보상 결과 전송 - 새로운 형식으로
+      // 백엔드에 성공한 보상 결과 전송
       if (successfulPayments.length > 0) {
         const paymentData = {
           joinIds: successfulPayments
@@ -350,7 +366,7 @@ const AdvertiserMembers = () => {
       console.error('🚨 전체 지급 오류:', err);
       alert(`입금 처리 중 오류 발생: ${err.message}`);
     } finally {
-      setIsPaying(false); // ✅ 무조건 종료 시 로딩 false
+      setIsPaying(false);
     }
   };
 

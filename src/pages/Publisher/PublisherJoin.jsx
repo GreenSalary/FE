@@ -19,7 +19,7 @@ const PublisherJoin = () => {
   const [contract, setContract] = useState(null);
   
   const navigate = useNavigate();
-  const { authenticatedFetch, isLoggedIn, getToken } = useUser();
+  const { authenticatedFetch, isLoggedIn, getToken, userInfo  } = useUser();
 
   // Web3 초기화
   const initWeb3 = async () => {
@@ -122,6 +122,14 @@ const PublisherJoin = () => {
       return;
     }
 
+    // JWT에서 userId 추출 (인플루언서 ID로 사용)
+    if (!userInfo || !userInfo.id) {
+      alert('로그인 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    const influencerId = userInfo.id; // JWT userId를 influencerId로 사용
+
     const isConfirmed = window.confirm('계약을 수락하시겠습니까?');
     if (!isConfirmed) {
       return;
@@ -130,9 +138,9 @@ const PublisherJoin = () => {
     try {
       setIsJoinLoading(true);
       
-      console.log('📝 계약 수락 요청:', contractId);
+      console.log('📝 계약 수락 요청:', { contractId, influencerId });
       
-      let joinTransactionHash = null;
+      let transactionHash = null;
       
       try {
         console.log('🔗 스마트 컨트랙트 join 호출 시작...');
@@ -161,16 +169,62 @@ const PublisherJoin = () => {
         
         console.log('💼 사용할 계정:', account);
         console.log('📋 스마트 컨트랙트 Ad ID:', contractDetail.smartContractId);
+        console.log('👤 인플루언서 ID (JWT userId):', influencerId);
         
-        // 스마트 컨트랙트 joinAd 함수 호출
-        const tx = await contract.methods.joinAd(contractDetail.smartContractId).send({
+        // 🔥 스마트 컨트랙트 joinAd 함수 호출 - influencerId 매개변수 추가
+        const tx = await contract.methods.joinAd(contractDetail.smartContractId, influencerId).send({
           from: account,
           gas: 500000,
           gasPrice: '20000000000'
         });
         
         console.log('✅ 스마트 컨트랙트 join 성공:', tx.transactionHash);
-        joinTransactionHash = tx.transactionHash;
+        transactionHash = tx.transactionHash; 
+        
+        // 🔥 이벤트에서 확인: 우리가 보낸 influencerId가 제대로 처리되었는지 검증
+        const receipt = await web3.eth.getTransactionReceipt(tx.transactionHash);
+        const joinedEvent = receipt.logs.find(log => {
+          try {
+            const decoded = web3.eth.abi.decodeLog(
+              [
+                { type: 'uint256', name: 'adId', indexed: true },
+                { type: 'uint256', name: 'influencerId', indexed: true }
+              ],
+              log.data,
+              log.topics
+            );
+            return decoded.adId == contractDetail.smartContractId;
+          } catch (e) {
+            return false;
+          }
+        });
+        
+        let smartContractInfluencerId = influencerId; // 기본값: 우리가 보낸 influencerId
+        
+        if (joinedEvent) {
+          const decoded = web3.eth.abi.decodeLog(
+            [
+              { type: 'uint256', name: 'adId', indexed: true },
+              { type: 'uint256', name: 'influencerId', indexed: true }
+            ],
+            joinedEvent.data,
+            joinedEvent.topics
+          );
+          smartContractInfluencerId = parseInt(decoded.influencerId);
+          console.log('📋 이벤트에서 확인된 스마트 컨트랙트 Influencer ID:', smartContractInfluencerId);
+          
+          // 우리가 보낸 influencerId와 이벤트에서 반환된 값이 일치하는지 확인
+          if (smartContractInfluencerId !== influencerId) {
+            console.warn('⚠️ 보낸 influencerId와 이벤트 influencerId가 다릅니다:', {
+              sentInfluencerId: influencerId,
+              eventInfluencerId: smartContractInfluencerId
+            });
+          } else {
+            console.log('✅ influencerId 일치 확인됨');
+          }
+        } else {
+          console.log('이벤트 파싱 실패, 보낸 influencerId 사용:', influencerId);
+        }
         
       } catch (contractError) {
         console.error('🚨 스마트 컨트랙트 join 실패:', contractError);
@@ -182,10 +236,7 @@ const PublisherJoin = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          joinTransactionHash // 스마트 컨트랙트 트랜잭션 해시 포함
-        }),
+        }
       });
       
       if (!response.ok) {
@@ -215,7 +266,7 @@ const PublisherJoin = () => {
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+    return date.toISOString().split('T')[0];
   };
 
   // 사이트명 변환 함수
