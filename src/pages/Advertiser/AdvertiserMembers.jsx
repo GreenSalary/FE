@@ -746,7 +746,8 @@ const StatusDot = styled.div`
   border-radius: 50%;
   background-color: ${({ status }) => {
     if (status === 'APPROVED') return '#28a745'; // 승인 - 초록색
-    if (status === 'REJECTED') return '#dc3545'; // 거절 - 빨간색    
+    if (status === 'REJECTED') return '#dc3545';
+    if (status == 'REVIEW_FROM_ADV') return '#3F8CFE'    
     return '#6c757d'; // 대기 - 회색                              
   }};
   flex-shrink: 0;

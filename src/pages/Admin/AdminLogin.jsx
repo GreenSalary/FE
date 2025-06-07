@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -7,174 +7,131 @@ import { useUser } from '../../contexts/UserContext';
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const AdminLogin = () => {
- const [showPassword, setShowPassword] = useState(false);
- const [isLoading, setIsLoading] = useState(false);
- const navigate = useNavigate();
- 
- // UserContext에서 상태 설정 함수들만 가져오기
- const { setUserType, setIsLoggedIn, setUserInfo } = useUser();
- 
- const [loginData, setLoginData] = useState({
-   id: '',
-   password: ''
- });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  
+  // UserContext 사용
+  const { isLoggedIn, userType, loginAdmin } = useUser();
+  
+  const [loginData, setLoginData] = useState({
+    id: '',
+    password: ''
+  });
 
- const handleLoginChange = (e) => {
-   const { name, value } = e.target;
-   setLoginData(prev => ({ ...prev, [name]: value }));
- };
+  // 이미 admin으로 로그인된 경우 admin home으로 리다이렉트
+  useEffect(() => {
+    if (isLoggedIn && userType === 'admin') {
+      navigate('/admin/home');
+    }
+  }, [isLoggedIn, userType, navigate]);
 
- const handleLoginSubmit = async (e) => {
-   e.preventDefault();
-   
-   const { id, password } = loginData;
+  const handleLoginChange = (e) => {
+    const { name, value } = e.target;
+    setLoginData(prev => ({ ...prev, [name]: value }));
+  };
 
-   if (!id || !password) {
-     alert('아이디와 비밀번호를 입력해주세요.');
-     return;
-   }
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    
+    const { id, password } = loginData;
 
-   // 하드코딩된 관리자 계정 체크 (임시)
-   if (id === 'admin' && password === 'admin') {
-     console.log('✅ 하드코딩된 관리자 계정 로그인');
-     
-     // UserContext 상태 직접 설정
-     const fakeToken = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })) + '.' +
-                     btoa(JSON.stringify({ 
-                       userId: 999, 
-                       name: '관리자', 
-                       id: 'admin', 
-                       role: 'admin',
-                       exp: Math.floor(Date.now() / 1000) + (60 * 60)
-                     })) + '.signature';
-     
-     localStorage.setItem('accessToken', fakeToken);
-     setUserType('admin');
-     setIsLoggedIn(true);
-     setUserInfo({
-       id: 999,
-       name: '관리자',
-       email: 'admin',
-       role: 'admin'
-     });
-     
-     navigate('/admin/home');
-     return;
-   }
+    if (!id || !password) {
+      alert('아이디와 비밀번호를 입력해주세요.');
+      return;
+    }
 
-   // 실제 관리자 API 호출
-   try {
-     setIsLoading(true);
-     
-     const response = await fetch(`${API_BASE_URL}/auth/admin/signin`, {
-       method: 'POST',
-       headers: {
-         'Content-Type': 'application/json',
-       },
-       body: JSON.stringify({
-         id,
-         password
-       })
-     });
+    try {
+      setIsLoading(true);
+      
+      // UserContext의 loginAdmin 함수 사용
+      const result = await loginAdmin(id, password);
+      
+      if (result.success) {
+        console.log('✅ 관리자 로그인 성공');
+        navigate('/admin/home');
+      } else {
+        throw new Error(result.error);
+      }
+      
+    } catch (err) {
+      console.error('🚨 관리자 로그인 오류:', err);
+      
+      let errorMessage = '로그인에 실패했습니다.';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <Container>
+      <LoginCard>
+        <Form onSubmit={handleLoginSubmit}>
+          <Title>Admin Sign In</Title>
+          
+          <RadioGroup>
+            <RadioLabel>
+              <RadioInput 
+                type="radio" 
+                name="userType" 
+                value="admin"
+                checked={true} 
+                readOnly
+              />
+              관리자
+            </RadioLabel>
+          </RadioGroup>
+          
+          <InputContainer>
+            <InputGroup>
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.5 0.875C5.49797 0.875 3.875 2.49797 3.875 4.5C3.875 6.15288 4.98124 7.54738 6.49373 7.98351C5.2997 8.12901 4.27557 8.55134 3.50407 9.31167C2.52216 10.2794 2.02502 11.72 2.02502 13.5999C2.02502 13.8623 2.23769 14.0749 2.50002 14.0749C2.76236 14.0749 2.97502 13.8623 2.97502 13.5999C2.97502 8.55134 4.89069 6.97502 7.5 6.97502C10.1093 6.97502 12.025 8.55134 12.025 13.5999C12.025 13.8623 12.2376 14.0749 12.5 14.0749C12.7623 14.0749 12.975 13.8623 12.975 13.5999C12.975 11.72 12.4778 10.2794 11.4959 9.31167C10.7244 8.55134 9.70026 8.12901 8.50627 7.98351C10.0188 7.54738 11.125 6.15288 11.125 4.5C11.125 2.49797 9.50203 0.875 7.5 0.875ZM4.825 4.5C4.825 3.02264 6.02264 1.825 7.5 1.825C8.97736 1.825 10.175 3.02264 10.175 4.5C10.175 5.97736 8.97736 7.175 7.5 7.175C6.02264 7.175 4.825 5.97736 4.825 4.5Z" fill="currentColor"/>
+              </svg>
+              <Input 
+                name="id" 
+                placeholder="관리자 아이디" 
+                type="text"
+                value={loginData.id}
+                onChange={handleLoginChange}
+                required
+              />
+            </InputGroup>
+            
+            <InputGroup>
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4.5 6.5V4.5C4.5 2.84315 5.84315 1.5 7.5 1.5C9.15685 1.5 10.5 2.84315 10.5 4.5V6.5M4.5 6.5H10.5M4.5 6.5H2.5V13.5H12.5V6.5H10.5" stroke="currentColor"/>
+              </svg>
+              <Input 
+                name="password" 
+                placeholder="관리자 비밀번호" 
+                type={showPassword ? 'text' : 'password'}
+                value={loginData.password}
+                onChange={handleLoginChange}
+                required
+              />
+              <EyeIcon onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <FaEye /> : <FaEyeSlash />}
+              </EyeIcon>
+            </InputGroup>
+          </InputContainer>
+          
+          <ButtonContainer>
+            <Button type="submit" disabled={isLoading}>
+              로그인
+            </Button>
+          </ButtonContainer>
+          
 
-     const data = await response.json();
-
-     if (!response.ok) {
-       throw new Error(data.message || '관리자 로그인에 실패했습니다.');
-     }
-
-     console.log('✅ 관리자 로그인 성공:', data);
-     
-     // 토큰 저장 및 상태 설정
-     localStorage.setItem('accessToken', data.accessToken);
-     setUserType('admin');
-     setIsLoggedIn(true);
-     setUserInfo({
-       id: data.userId || 999,
-       name: data.name || '관리자',
-       email: id,
-       role: 'admin'
-     });
-     
-     navigate('/admin/home');
-     
-   } catch (err) {
-     console.error('🚨 관리자 로그인 오류:', err);
-     
-     let errorMessage = '로그인에 실패했습니다.';
-     
-     if (err.message) {
-       errorMessage = err.message;
-     }
-     
-     alert(errorMessage);
-   } finally {
-     setIsLoading(false);
-   }
- };
- 
- return (
-   <Container>
-     <LoginCard>
-       <Form onSubmit={handleLoginSubmit}>
-         <Title>Admin Sign In</Title>
-         
-         <RadioGroup>
-           <RadioLabel>
-             <RadioInput 
-               type="radio" 
-               name="userType" 
-               value="admin"
-               checked={true} 
-               readOnly
-             />
-             관리자
-           </RadioLabel>
-         </RadioGroup>
-         
-         <InputContainer>
-           <InputGroup>
-             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-               <path d="M0.5 4.5C0.5 3.39543 1.39543 2.5 2.5 2.5H12.5C13.6046 2.5 14.5 3.39543 14.5 4.5V10.5C14.5 11.6046 13.6046 12.5 12.5 12.5H2.5C1.39543 12.5 0.5 11.6046 0.5 10.5V4.5Z" stroke="currentColor"/>
-               <path d="M0.5 4.5L7.5 8.5L14.5 4.5" stroke="currentColor"/>
-             </svg>
-             <Input 
-               name="id" 
-               placeholder="관리자 아이디" 
-               type="text"
-               value={loginData.id}
-               onChange={handleLoginChange}
-               required
-             />
-           </InputGroup>
-           
-           <InputGroup>
-             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-               <path d="M4.5 6.5V4.5C4.5 2.84315 5.84315 1.5 7.5 1.5C9.15685 1.5 10.5 2.84315 10.5 4.5V6.5M4.5 6.5H10.5M4.5 6.5H2.5V13.5H12.5V6.5H10.5" stroke="currentColor"/>
-             </svg>
-             <Input 
-               name="password" 
-               placeholder="관리자 비밀번호" 
-               type={showPassword ? 'text' : 'password'}
-               value={loginData.password}
-               onChange={handleLoginChange}
-               required
-             />
-             <EyeIcon onClick={() => setShowPassword(!showPassword)}>
-               {showPassword ? <FaEye /> : <FaEyeSlash />}
-             </EyeIcon>
-           </InputGroup>
-         </InputContainer>
-         
-         <ButtonContainer>
-           <Button type="submit" disabled={isLoading}>
-             로그인
-           </Button>
-         </ButtonContainer>
-       </Form>
-     </LoginCard>
-   </Container>
- );
+        </Form>
+      </LoginCard>
+    </Container>
+  );
 };
 
 export default AdminLogin;

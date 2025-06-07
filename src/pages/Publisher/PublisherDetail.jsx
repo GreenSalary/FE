@@ -299,6 +299,30 @@ const LoadingSpinner = styled.div`
   }
 `;
 
+const ImagePreviewContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+`;
+
+const ImagePreviewItem = styled.div`
+  position: relative;
+  width: 100px;
+  height: 100px;
+`;
+
+const PreviewImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+`;
+
+const ImageSection = styled.div`
+  margin-top: 16px;
+`;
+
 // 날짜 포맷팅 함수
 const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -565,6 +589,29 @@ const PublisherDetail = () => {
                 </CheckboxWrapper>
               </ContentArea>
             </Row>
+
+            {/* 제품 사진 표시 (사진이 있는 경우만) */}
+              {contractDetail.photo_url && (
+                <Row>
+                  <Label>제품 사진</Label>
+                  <ContentArea style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <ImageSection>
+                      <ImagePreviewContainer>
+                        <ImagePreviewItem>
+                          <PreviewImage 
+                            src={contractDetail.photo_url} 
+                            alt="제품 사진"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </ImagePreviewItem>
+                      </ImagePreviewContainer>
+                    </ImageSection>
+                  </ContentArea>
+                </Row>
+              )}
+
             <Row>
               <Label>상세 설명</Label>
               <ContentArea style={{ paddingBottom: '8px' }}>

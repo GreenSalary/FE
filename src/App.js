@@ -127,7 +127,7 @@ const AppContent = () => {
         </ProtectedRoute>
       }>
         <Route index element={<AdminList />} />
-        <Route path="detail/:adId" element={<AdminDetail />} />
+        <Route path="detail/:askId" element={<AdminDetail />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

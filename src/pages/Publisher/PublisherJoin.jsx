@@ -461,7 +461,6 @@ const PublisherJoin = () => {
                 </Row>
               )}
 
-
               <Row>
                 <Label>상세 설명</Label>
                 <ContentArea style={{ paddingBottom: '8px' }}>

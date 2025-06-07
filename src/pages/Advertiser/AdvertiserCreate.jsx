@@ -11,6 +11,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const AdvertiserCreate = () => {
   const navigate = useNavigate();
   const { userInfo } = useUser();
+  const { authenticatedFetch } = useUser();
   
   // 기존 상태들
   const [conditions, setConditions] = useState(['']);
@@ -487,18 +488,13 @@ const AdvertiserCreate = () => {
         ...(photoRequired && productImageUrl && { photo_url: productImageUrl }),
         
         smartContractId: smartContractAdId,           // 광고 ID
-        transactionHash: tx.transactionHash
       };
 
       console.log('백엔드 API 호출 데이터:', apiData);
 
       // 실제 API 호출
-      const response = await fetch(`${API_BASE_URL}/advertiser/contract`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/advertiser/contract`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
         body: JSON.stringify(apiData)
       });
 
@@ -845,7 +841,7 @@ const AdvertiserCreate = () => {
             <WalletSection>
               <div style={{ marginBottom: '8px' }}>연결된 지갑</div>
               <div style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all' }}>
-                {userWalletAddress}
+                {walletAddress}
               </div>
               <div style={{ marginTop: '8px', color: '#666' }}>
                 🦊 MetaMask

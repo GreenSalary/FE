@@ -1,4 +1,4 @@
-// src/contexts/UserContext.js - 실시간 동기화 포함 최종 완성 버전
+// src/contexts/UserContext.js - 수정된 완성 버전
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const UserContext = createContext();
@@ -256,6 +256,57 @@ export const UserProvider = ({ children }) => {
     return 'advertiser';
   };
 
+  // 🔧 수정: authenticatedFetch - 실시간 토큰 체크 추가
+  const authenticatedFetch = async (url, options = {}) => {
+    // 🆕 API 호출 전에 실시간 토큰 상태 체크
+    if (!checkCurrentTokenStatus()) {
+      throw new Error('다른 창에서 로그아웃되었습니다. 페이지를 새로고침해주세요.');
+    }
+    
+    const token = tokenUtils.getToken(userType);
+    
+    if (!token) {
+      console.log(`❌ ${userType} 토큰이 없음`);
+      logout();
+      throw new Error('로그인이 필요합니다.');
+    }
+    
+    if (tokenUtils.isTokenExpired(token)) {
+      console.log(`⏰ ${userType} 토큰이 만료되어 로그아웃합니다.`);
+      logout();
+      throw new Error('로그인이 만료되었습니다. 다시 로그인해주세요.');
+    }
+
+    const defaultOptions = {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    };
+
+    try {
+      const response = await fetch(url, { ...options, ...defaultOptions });
+      
+      // 🆕 401 응답 시 토큰 상태 재확인
+      if (response.status === 401) {
+        console.log('🔍 401 응답 - 토큰 상태 재확인');
+        checkCurrentTokenStatus();
+      }
+      
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const getHomePath = () => {
+    if (userType === USER_TYPES.ADVERTISER) return '/advertiser/home';
+    if (userType === USER_TYPES.INFLUENCER) return '/influencer/home';
+    if (userType === USER_TYPES.ADMIN) return '/admin/home'; 
+    return '/';
+  };
+
   // 🆕 Storage 이벤트 리스너 (다른 탭/창에서의 변경 감지)
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -318,24 +369,6 @@ export const UserProvider = ({ children }) => {
 
       console.log(`✅ 유효한 ${currentRole} 토큰 발견 - 사용자 정보 복원 시도`);
       
-      // 관리자 계정 체크
-      if (currentRole === 'admin') {
-        const decoded = tokenUtils.decodeToken(token);
-        if (decoded && decoded.email === 'admin@example.com') {
-          console.log('👑 관리자 계정 로그인 복원');
-          setUserType('admin');
-          setIsLoggedIn(true);
-          setUserInfo({
-            id: 999,
-            name: '관리자',
-            email: 'admin@example.com',
-            role: 'admin'
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-
       // 일반 사용자 정보 복원
       const success = restoreUserFromToken(token, currentRole);
       
@@ -391,33 +424,6 @@ export const UserProvider = ({ children }) => {
       const existingToken = tokenUtils.getToken(selectedUserType);
       if (existingToken) {
         console.log(`⚠️ 기존 ${selectedUserType} 토큰 발견 - 덮어쓰기 예정`);
-      }
-      
-      // 관리자 계정 하드코딩 처리
-      if (email === 'admin@example.com' && password === 'admin') {
-        const fakeToken = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })) + '.' +
-                        btoa(JSON.stringify({ 
-                          userId: 999, 
-                          userName: '관리자', 
-                          email: 'admin@example.com', 
-                          role: 'admin',
-                          exp: Math.floor(Date.now() / 1000) + (60 * 60)
-                        })) + '.signature';
-        
-        tokenUtils.setToken(fakeToken, 'admin');
-        tokenUtils.setUserInfo({ id: 999, email: 'admin@example.com' }, 'admin');
-        
-        setUserType('admin');
-        setIsLoggedIn(true);
-        setUserInfo({
-          id: 999,
-          name: '관리자',
-          email: 'admin@example.com',
-          role: 'admin'
-        });
-        
-        console.log('👑 관리자 로그인 성공');
-        return { success: true };
       }
 
       // 실제 백엔드 API 호출
@@ -504,55 +510,86 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // 🔧 수정: authenticatedFetch - 실시간 토큰 체크 추가
-  const authenticatedFetch = async (url, options = {}) => {
-    // 🆕 API 호출 전에 실시간 토큰 상태 체크
-    if (!checkCurrentTokenStatus()) {
-      throw new Error('다른 창에서 로그아웃되었습니다. 페이지를 새로고침해주세요.');
-    }
-    
-    const token = tokenUtils.getToken(userType);
-    
-    if (!token) {
-      console.log(`❌ ${userType} 토큰이 없음`);
-      logout();
-      throw new Error('로그인이 필요합니다.');
-    }
-    
-    if (tokenUtils.isTokenExpired(token)) {
-      console.log(`⏰ ${userType} 토큰이 만료되어 로그아웃합니다.`);
-      logout();
-      throw new Error('로그인이 만료되었습니다. 다시 로그인해주세요.');
-    }
-
-    const defaultOptions = {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    };
-
+  // 🆕 관리자 로그인 함수 추가
+  const loginAdmin = async (id, password) => {
     try {
-      const response = await fetch(url, { ...options, ...defaultOptions });
+      setIsLoading(true);
       
-      // 🆕 401 응답 시 토큰 상태 재확인
-      if (response.status === 401) {
-        console.log('🔍 401 응답 - 토큰 상태 재확인');
-        checkCurrentTokenStatus();
-      }
-      
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  };
+      // 실제 관리자 API 호출
+      const response = await fetch(`${API_BASE_URL}/auth/admin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role: "admin",
+          id: id,
+          pw: password
+        })
+      });
 
-  const getHomePath = () => {
-    if (userType === USER_TYPES.ADVERTISER) return '/advertiser/home';
-    if (userType === USER_TYPES.INFLUENCER) return '/influencer/home';
-    if (userType === USER_TYPES.ADMIN) return '/admin/home'; 
-    return '/';
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Admin API 에러:', data);
+        
+        let errorMessage;
+        
+        if (response.status === 401) {
+          errorMessage = '아이디 또는 비밀번호를 확인해주세요.';
+        } else if (response.status === 400) {
+          errorMessage = '입력 정보를 확인해주세요.';
+        } else if (response.status === 404) {
+          errorMessage = '존재하지 않는 관리자 계정입니다.';
+        } else if (response.status === 500) {
+          errorMessage = '아이디 또는 비밀번호를 확인해주세요.';
+        } else {
+          errorMessage = data.message || '관리자 로그인에 실패했습니다.';
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      console.log('✅ 관리자 로그인 성공! API 응답:', data);
+
+      const accessToken = data.accessToken;
+      if (!accessToken) {
+        throw new Error('서버에서 토큰을 받지 못했습니다.');
+      }
+
+      // admin 토큰 저장
+      tokenUtils.setToken(accessToken, 'admin');
+
+      // 관리자 정보 설정
+      const adminInfo = {
+        id: data.userId || data.id || 999,
+        name: data.name || data.userName || '관리자',
+        email: data.email || id,
+        role: 'admin'
+      };
+
+      // 사용자 정보도 저장
+      tokenUtils.setUserInfo(adminInfo, 'admin');
+
+      setUserType('admin');
+      setIsLoggedIn(true);
+      setUserInfo({
+        id: adminInfo.id,
+        name: adminInfo.name,
+        email: adminInfo.email,
+        role: 'admin'
+      });
+
+      console.log('✅ 관리자 로그인 상태 업데이트 완료:', adminInfo);
+
+      return { success: true };
+      
+    } catch (error) {
+      console.error('관리자 로그인 오류:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const value = {
@@ -562,6 +599,7 @@ export const UserProvider = ({ children }) => {
     userInfo,
     
     login,
+    loginAdmin, // 🆕 추가
     logout,
     logoutAll, // 🆕 전체 로그아웃
     updateUserInfo,
