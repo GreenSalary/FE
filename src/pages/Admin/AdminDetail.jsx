@@ -235,7 +235,7 @@ const AdminDetail = () => {
             <Label>참여 인원</Label>
             <ContentArea>
               <Input value={formData.participants || 0} readOnly />
-              <div>명명</div>
+              <div>명</div>
             </ContentArea>
             <Label>모집 인원</Label>
             <ContentArea>

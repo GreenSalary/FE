@@ -435,14 +435,22 @@ const AdvertiserDetail = () => {
           </Row>
 
           <Row>
-            <Label>보수</Label>
+              <Label>보수</Label>
+              <ContentArea>
+                <Input value={adDetail.reward || 0} readOnly />
+                <div>ETH</div>
+              </ContentArea>
+            </Row>
+
+            <Row>
+            <Label>참여 인원</Label>
             <ContentArea>
-              <Input value={adDetail.reward || ''} readOnly />
-              <div>원</div>
+              <Input value={adDetail.participants || 0} readOnly />
+              <div>명</div>
             </ContentArea>
             <Label>모집 인원</Label>
             <ContentArea>
-              <Input value={adDetail.recruits || ''} readOnly />
+              <Input value={adDetail.recruits || 0} readOnly />
               <div>명</div>
             </ContentArea>
           </Row>

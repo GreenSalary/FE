@@ -72,6 +72,29 @@ const SectionTitle = styled.div`
   margin-bottom: 16px;
 `;
 
+const SectionTitleWithStatus = styled.div`
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const PaymentStatus = styled.span`
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: normal;
+  ${props => props.paid ? `
+    background-color: #d4edda;
+    color: #155724;
+  ` : `
+    background-color: #D9D9D9;
+    color: #878888;
+  `}
+`;
+
 const UrlInputRow = styled.div`
   display: flex;
   gap: 8px;
@@ -91,12 +114,17 @@ const ChangeButton = styled.button`
   background-color: #e0f0ff;
   border: none;
   cursor: pointer;
+  &:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+  }
 `;
 
 const StatusInput = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin: 0 30px;
 `;
 
 const StatusGroup = styled.div`
@@ -344,26 +372,152 @@ const getSiteDisplayName = (siteCode) => {
   }
 };
 
+// 상태에 따른 StatusBadge용 상태 변환
+const getStatusForBadge = (reviewStatus) => {
+  switch (reviewStatus) {
+    case 'PENDING':
+      return 'not_executed'; // 미제출
+    case 'APPROVED':
+      return 'complete'; // 적합
+    case 'REJECTED':
+      return 'rejected'; // 부적합
+    case 'REVIEW_FROM_ADV':
+      return 'review'; // 추가 검토중
+    case 'REVIEW_FROM_INF':
+      return 'inquiry'; // 문의중
+    default:
+      return 'not_executed';
+  }
+};
+
+// 문의 버튼 표시 여부 결정
+const shouldShowInquiryButton = (reviewStatus, rewardPaid) => {
+  // 보수가 지급되었으면 문의 버튼 안보임
+  if (rewardPaid) return false;
+  
+  // REJECTED만 문의 버튼 보임
+  return reviewStatus === 'REJECTED';
+};
+
+// URL 편집 가능 여부 결정
+const isUrlEditable = (reviewStatus) => {
+  // APPROVED나 보수 지급 완료시 편집 불가
+  return reviewStatus !== 'APPROVED';
+};
+
 const PublisherDetail = () => {
   const { adId } = useParams();
   const [contractDetail, setContractDetail] = useState(null);
+  const [urlInfo, setUrlInfo] = useState(null);
+  const [currentUrl, setCurrentUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { authenticatedFetch, isLoggedIn, getToken } = useUser();
 
-  // 기존 더미 데이터 (URL 입력란과 보수 상태용)
-  const staticData = {
-    url: '',
-    amount: '30000',
-    status: 'not_executed'
+  // 문의 버튼 클릭 핸들러
+  const handleInquiry = async () => {
+    if (!urlInfo?.joinId) {
+      alert('문의 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const confirmed = window.confirm(`${contractDetail.title || '이 광고'}에 대해서 문의를 보내시겠습니까?`);
+    
+    if (!confirmed) return;
+
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/influencer/ask/${urlInfo.joinId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('문의 전송에 실패했습니다.');
+      }
+
+      alert('문의가 성공적으로 전송되었습니다.');
+      
+      // URL 정보 다시 가져와서 상태 업데이트 (문의중 상태로 변경될 것)
+      await fetchUrlInfo();
+      
+    } catch (err) {
+      console.error('문의 전송 오류:', err);
+      alert('문의 전송 중 오류가 발생했습니다.');
+    }
   };
 
-  // 문의 버튼 클릭 핸들러
-  const handleInquiry = () => {
-    console.log('문의하기 클릭됨');
-    // 나중에 구현될 문의 기능
-    alert('광고주에게 문의를 보냅니다.');
+  // URL 제출/변경 핸들러
+  const handleUrlSubmit = async () => {
+    if (!currentUrl.trim()) {
+      alert('URL을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      const response = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/${adId}/url`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: currentUrl
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || 'URL 제출에 실패했습니다.';
+        throw new Error(errorMessage);
+      }
+
+      // URL 정보 다시 가져오기
+      await fetchUrlInfo();
+      alert('URL이 성공적으로 제출되었습니다.');
+      
+    } catch (err) {
+      console.error('URL 제출 오류:', err);
+      alert(err.message || 'URL 제출 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // URL 정보 가져오기
+  const fetchUrlInfo = async () => {
+    try {
+      const response = await authenticatedFetch(`${API_BASE_URL}/influencer/contract/${adId}/url`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 URL 정보:', data);
+        setUrlInfo(data);
+        setCurrentUrl(data.url || '');
+      } else {
+        setUrlInfo({
+          url: '',
+          review_status: 'PENDING',
+          reward_paid: false,
+          joinId: null
+        });
+        setCurrentUrl('');
+      }
+    } catch (err) {
+      console.error('URL 정보 불러오기 실패:', err);
+      // 오류 시 기본값 설정
+      setUrlInfo({
+        url: '',
+        review_status: 'PENDING',
+        reward_paid: false,
+        joinId: null
+      });
+      setCurrentUrl('');
+    }
   };
 
   // 계약 상세 정보 가져오기
@@ -385,6 +539,9 @@ const PublisherDetail = () => {
       console.log('📋 계약 상세 데이터:', data);
       
       setContractDetail(data);
+      
+      // URL 정보도 함께 가져오기
+      await fetchUrlInfo();
       
     } catch (err) {
       console.error('🚨 계약 상세 정보 불러오기 실패:', err);
@@ -436,7 +593,7 @@ const PublisherDetail = () => {
     );
   }
 
-  if (!contractDetail) {
+  if (!contractDetail || !urlInfo) {
     return (
       <Container>
         <ErrorMessage>계약 정보를 찾을 수 없습니다.</ErrorMessage>
@@ -444,8 +601,12 @@ const PublisherDetail = () => {
     );
   }
 
-  const isEditable = staticData.status !== 'deposited';
-  const buttonLabel = staticData.status === 'not_executed' ? '제출' : '변경';
+  const isEditable = isUrlEditable(urlInfo.review_status) && !urlInfo.reward_paid;
+  const buttonLabel = urlInfo.url ? '변경' : '제출';
+  const showInquiryButton = shouldShowInquiryButton(urlInfo.review_status, urlInfo.reward_paid);
+
+  const isUrlChanged = currentUrl.trim() !== (urlInfo.url || '').trim();
+  const isButtonEnabled = isEditable && (urlInfo.url ? isUrlChanged : currentUrl.trim());
 
   // 미디어 요구사항 추출
   const hasTextRequirement = contractDetail.media?.minTextLength > 0;
@@ -459,19 +620,38 @@ const PublisherDetail = () => {
           <TopLeft>
             <SectionTitle>광고 url 제출란</SectionTitle>
             <UrlInputRow>
-              <UrlInput placeholder="링크를 입력하세요" disabled={!isEditable} />
-              {isEditable && <ChangeButton>{buttonLabel}</ChangeButton>}
+              <UrlInput 
+                placeholder="링크를 입력하세요" 
+                value={currentUrl}
+                onChange={(e) => setCurrentUrl(e.target.value)}
+                disabled={!isEditable} 
+              />
+              {isEditable && (
+                <ChangeButton 
+                  onClick={handleUrlSubmit}
+                  disabled={isSubmitting || !isButtonEnabled}
+                >
+                  {buttonLabel}
+                </ChangeButton>
+              )}
             </UrlInputRow>
           </TopLeft>
           <TopRight>
-            <SectionTitle>광고 보수 현황</SectionTitle>
+            <SectionTitleWithStatus>
+              광고 보수 현황
+              <PaymentStatus paid={urlInfo.reward_paid}>
+                {urlInfo.reward_paid ? '입금 완료' : '미입금'}
+              </PaymentStatus>
+            </SectionTitleWithStatus>
             <StatusInput>
-              <Amount>{staticData.amount}ETH</Amount>
+              <Amount>{contractDetail.reward}ETH</Amount>
               <StatusGroup>
-                <StatusBadge status={staticData.status} />
-                <InquiryButton onClick={handleInquiry}>
-                  문의
-                </InquiryButton>
+                <StatusBadge status={getStatusForBadge(urlInfo.review_status)} />
+                {showInquiryButton && (
+                  <InquiryButton onClick={handleInquiry}>
+                    문의
+                  </InquiryButton>
+                )}
               </StatusGroup>
             </StatusInput>
           </TopRight>

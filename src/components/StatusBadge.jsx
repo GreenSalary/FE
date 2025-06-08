@@ -4,12 +4,16 @@ import styled from 'styled-components';
 const statusMap = {
   deposited:     { label: '입금완료', bg: '#CEEEDA', color: '#69AC81' },
   completed:     { label: '완료',     bg: '#CEEEDA', color: '#69AC81' },
+  complete:     { label: '적합', bg: '#CEEEDA', color: '#69AC81' },
   incomplete:    { label: '미완료',   bg: '#D9D9D9', color: '#878888' },
   not_executed:  { label: '미이행',   bg: '#D9D9D9', color: '#878888' },
+  didnt_executed:  { label: '미제출',   bg: '#D9D9D9', color: '#878888' },
   rejected:      { label: '부적합',   bg: '#F6B6B8', color: '#B3475A' },
   '대기중':       { label: '대기중',   bg: '#FFD59A', color: '#996F1A' },
   '진행중':   { label: '진행중',   bg: '#CEEEDA', color: '#69AC81' },
   '마감':        { label: '마감',     bg: '#D9D9D9', color: '#878888' },
+  review:        { label: '추가 검토중', bg: '#FFD59A', color: '#996F1A' },
+  inquiry:       { label: '문의중',   bg: '#E6F3FF', color: '#0066CC' },
 };
 
 const Badge = styled.span`
