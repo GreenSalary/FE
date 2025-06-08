@@ -153,6 +153,17 @@ const InquiryButton = styled.button`
   }
 `;
 
+const FeedbackLink = styled.a`
+  font-size: 14px;
+  font-weight: bold;
+  color: #007bff;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 const SubTitle = styled.h3`
   font-size: 14px;
   font-weight: bold;
@@ -503,7 +514,8 @@ const PublisherDetail = () => {
           url: '',
           review_status: 'PENDING',
           reward_paid: false,
-          joinId: null
+          joinId: null,
+          pdf_url: null
         });
         setCurrentUrl('');
       }
@@ -514,7 +526,8 @@ const PublisherDetail = () => {
         url: '',
         review_status: 'PENDING',
         reward_paid: false,
-        joinId: null
+        joinId: null,
+        pdf_url: null
       });
       setCurrentUrl('');
     }
@@ -618,7 +631,18 @@ const PublisherDetail = () => {
       <ContentContainer>
         <Top>
           <TopLeft>
-            <SectionTitle>광고 url 제출란</SectionTitle>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <SectionTitle style={{ marginBottom: 0 }}>광고 url 제출란</SectionTitle>
+              {urlInfo.pdf_url && (
+                <FeedbackLink 
+                  href={urlInfo.pdf_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  피드백
+                </FeedbackLink>
+              )}
+            </div>
             <UrlInputRow>
               <UrlInput 
                 placeholder="링크를 입력하세요" 

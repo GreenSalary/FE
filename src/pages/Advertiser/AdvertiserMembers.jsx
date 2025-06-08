@@ -413,10 +413,11 @@ const AdvertiserMembers = () => {
                   disabled={isLoading}
                 />
               </HeaderCell>
-              <HeaderCell width="200px">참여자명</HeaderCell>
-              <HeaderCell width="100px" textAlign="center">url</HeaderCell>
-              <HeaderCell width="100px" textAlign="center">입금여부</HeaderCell>
-              <HeaderCell width="100px" textAlign="center">문의하기</HeaderCell>
+              <HeaderCell width="180px">참여자명</HeaderCell>
+              <HeaderCell width="80px" textAlign="center">url</HeaderCell>
+              <HeaderCell width="80px" textAlign="center">피드백</HeaderCell>
+              <HeaderCell width="80px" textAlign="center">입금여부</HeaderCell>
+              <HeaderCell width="80px" textAlign="center">문의하기</HeaderCell>
             </HeaderRow>
           </TableHeader>
         </HeaderTable>
@@ -427,7 +428,7 @@ const AdvertiserMembers = () => {
             <TableBody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="6">
                     <LoadingMessage>
                       <LoadingSpinner />
                       인플루언서 정보를 불러오는 중...
@@ -436,7 +437,7 @@ const AdvertiserMembers = () => {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="6">
                     <ErrorMessage>
                       {error}
                       <br />
@@ -459,19 +460,19 @@ const AdvertiserMembers = () => {
                 </tr>
               ) : !data ? (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="6">
                     <ErrorMessage>인플루언서 정보를 찾을 수 없습니다.</ErrorMessage>
                   </td>
                 </tr>
               ) : data.influencers.length === 0 ? (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="6">
                     <EmptyMessage>참여자가 없습니다.</EmptyMessage>
                   </td>
                 </tr>
               ) : filteredInfluencers.length === 0 ? (
                 <tr>
-                  <td colSpan="5">
+                  <td colSpan="6">
                     <EmptyMessage>해당 조건에 맞는 참여자가 없습니다.</EmptyMessage>
                   </td>
                 </tr>
@@ -487,7 +488,7 @@ const AdvertiserMembers = () => {
                           disabled={!influencer.submit_reward_available}
                         />
                       </TableCell>
-                      <TableCell width="200px">
+                      <TableCell width="180px">
                         <NameContainer>
                           <StatusDot status={influencer.review_status} />
                           <InfluencerName>{influencer.influencer_name}</InfluencerName>
@@ -506,7 +507,7 @@ const AdvertiserMembers = () => {
                           </DescriptionToggle>
                         </NameContainer>
                       </TableCell>
-                      <TableCell width="100px" textAlign="center">
+                      <TableCell width="80px" textAlign="center">
                         {influencer.url ? (
                           <UrlLink
                             href={influencer.url}
@@ -519,14 +520,27 @@ const AdvertiserMembers = () => {
                           <DisabledText>-</DisabledText>
                         )}
                       </TableCell>
-                      <TableCell width="100px" textAlign="center">
+                      <TableCell width="80px" textAlign="center">
+                        {influencer.pdf_url ? (
+                          <FeedbackLink
+                            href={influencer.pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            피드백
+                          </FeedbackLink>
+                        ) : (
+                          <DisabledText>-</DisabledText>
+                        )}
+                      </TableCell>
+                      <TableCell width="80px" textAlign="center">
                         {influencer.reward_paid ? (
                           <CompletedText>완료</CompletedText>
                         ) : (
                           <DisabledText>-</DisabledText>
                         )}
                       </TableCell>
-                      <TableCell width="100px" textAlign="center">
+                      <TableCell width="80px" textAlign="center">
                       {influencer.review_status === "REVIEW_FROM_ADV" ? (
                         <InquiryButton disabled>
                           문의중
@@ -776,6 +790,16 @@ const DescriptionToggle = styled.div`
 
 const UrlLink = styled.a`
   color: #0077cc;
+  text-decoration: none;
+  font-weight: 500;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const FeedbackLink = styled.a`
+  color: #007bff;
   text-decoration: none;
   font-weight: 500;
   
