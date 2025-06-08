@@ -9,7 +9,7 @@ import { useUser } from '../contexts/UserContext';
 
 const iconMap = {
   home: { icon: <FaHome />, label: '홈', path: 'home' },
-  detail: { icon: <FaHome />, label: '홈', path: 'detail' },
+  detail: { icon: <FaHome />, label: '광고 홈', path: 'detail' },
   members: { icon: <FaClipboardList />, label: '광고 현황', path: 'members' },
   payment: { icon: <FaCreditCard />, label: '지불 내역', path: 'payment' },
   join: { icon: <FaPlus />, label: '계약 추가', path: 'join' },
@@ -18,7 +18,6 @@ const iconMap = {
   logout: { icon: <FaSignOutAlt />, label: '로그아웃' },
 };
 
-// ✅ userType prop 제거, detailMode는 유지
 const NavbarLeft = ({ detailMode = false }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();

@@ -36,7 +36,7 @@ const ContentArea = styled.div`
 
 const PublisherDashboard = ({ userType }) => {
   const { pathname } = useLocation();
-  const isDetail = pathname.includes('/influencer/detail/');
+  const isDetail = false;
   const isMypage = pathname.includes('/influencer/mypage');
 
   return (
