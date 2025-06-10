@@ -229,9 +229,9 @@ const AuthForm = () => {
             <>
               <Title light>Welcome</Title>
               <Subtitle light>
-                Green Salary는 블록체인과 에스크로를 통해<br />
-                근로자의 근무시간을 정확히 기록하고<br />
-                고용주와 근로자 간 투명한 임금 지급을 보장합니다.
+                블록체인(BlockChain)과 AI를 활용해<br />
+                단발성 바이럴 계약을 신뢰 있게<br />
+                자동화하는 계약 관리 특화 웹 서비스
               </Subtitle>
               <Button outline onClick={toggleMode}>
                 회원가입하기

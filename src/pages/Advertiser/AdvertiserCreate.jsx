@@ -319,6 +319,19 @@ const AdvertiserCreate = () => {
     }
   };
 
+  const convertKSTToUTC = (kstDateString) => {
+    // 사용자가 선택한 날짜를 KST로 해석
+    const kstDate = new Date(kstDateString + 'T00:00:00+09:00');
+    // UTC 날짜 문자열로 변환
+    return kstDate.toISOString().split('T')[0];
+  };
+
+  const convertKSTToUTCTimestamp = (kstDateString, endOfDay = false) => {
+    const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
+    const kstDate = new Date(kstDateString + timeString);
+    return Math.floor(kstDate.getTime() / 1000);
+  };
+
   // 이미지를 서버에 업로드하는 함수 (토큰 불필요)
   const uploadImageToServer = async (file) => {
     const formData = new FormData();
@@ -386,8 +399,7 @@ const AdvertiserCreate = () => {
       const metadataString = JSON.stringify(metadata);
       const metadataHash = web3.utils.keccak256(metadataString);
       
-      const deadline = new Date(formData.uploadEndDate + "T23:59:59");
-      const deadlineTimestamp = Math.floor(deadline.getTime() / 1000);
+      const deadlineTimestamp = convertKSTToUTCTimestamp(formData.uploadEndDate, true);
 
       // smart contract
       const tx = await contract.methods.addContract(
@@ -454,13 +466,13 @@ const AdvertiserCreate = () => {
         reward: parseFloat(formData.reward),
         recruits: parseInt(formData.maxInfluencer),
         uploadPeriod: {
-          startDate: formData.uploadStartDate,
-          endDate: formData.uploadEndDate
+          startDate: convertKSTToUTC(formData.uploadStartDate), // KST → UTC
+          endDate: convertKSTToUTC(formData.uploadEndDate)       // KST → UTC
         },
         ...(formData.maintainStartDate && formData.maintainEndDate && {
           maintainPeriod: {
-            startDate: formData.maintainStartDate,
-            endDate: formData.maintainEndDate
+            startDate: convertKSTToUTC(formData.maintainStartDate), // KST → UTC
+            endDate: convertKSTToUTC(formData.maintainEndDate)       // KST → UTC
           }
         }),
         ...(tags.length > 0 && { keywords: tags }),

@@ -269,6 +269,19 @@ const PublisherJoin = () => {
     return date.toISOString().split('T')[0];
   };
 
+  const formatDateToKST = (utcDateString) => {
+    if (!utcDateString) return '';
+    
+    const utcDate = new Date(utcDateString + 'T00:00:00Z');
+    const kstDate = new Date(utcDate.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+    
+    const year = kstDate.getFullYear();
+    const month = String(kstDate.getMonth() + 1).padStart(2, '0');
+    const day = String(kstDate.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+
   // 사이트명 변환 함수
   const getSiteDisplayName = (siteCode) => {
     switch (siteCode) {
@@ -345,13 +358,13 @@ const PublisherJoin = () => {
                 <ContentArea>
                   <Input 
                     type="date" 
-                    value={formatDate(contractDetail.uploadPeriod?.startDate)} 
+                    value={formatDateToKST(contractDetail.uploadPeriod?.startDate)} 
                     readOnly 
                   />
                   <div style={{ margin: '0 8px' }}>~</div>
                   <Input 
                     type="date" 
-                    value={formatDate(contractDetail.uploadPeriod?.endDate)} 
+                    value={formatDateToKST(contractDetail.uploadPeriod?.endDate)} 
                     readOnly 
                   />
                 </ContentArea>
@@ -363,13 +376,13 @@ const PublisherJoin = () => {
                   <ContentArea>
                     <Input 
                       type="date" 
-                      value={formatDate(contractDetail.maintainPeriod?.startDate)} 
+                      value={formatDateToKST(contractDetail.maintainPeriod?.startDate)} 
                       readOnly 
                     />
                     <div style={{ margin: '0 8px' }}>~</div>
                     <Input 
                       type="date" 
-                      value={formatDate(contractDetail.maintainPeriod?.endDate)} 
+                      value={formatDateToKST(contractDetail.maintainPeriod?.endDate)} 
                       readOnly 
                     />
                   </ContentArea>
