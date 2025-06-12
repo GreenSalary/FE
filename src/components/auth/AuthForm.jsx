@@ -23,6 +23,7 @@ const AuthForm = () => {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   
   const [emailError, setEmailError] = useState('');
+  const [walletError, setWalletError] = useState('');
 
   const [loginData, setLoginData] = useState({
     email: '',
@@ -78,6 +79,11 @@ const AuthForm = () => {
     }
   };
 
+  const validateWalletAddress = (address) => {
+    const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+    return walletRegex.test(address);
+  };
+
   // 커스텀 도메인 입력 핸들러
   const handleCustomDomainChange = (e) => {
     const value = e.target.value;
@@ -105,6 +111,11 @@ const AuthForm = () => {
     if (!signupData.name.trim()) return alert('이름을 입력해주세요.');
     if (!signupData.password) return alert('비밀번호를 입력해주세요.');
     if (signupData.password !== signupData.passwordCheck) return alert('비밀번호가 일치하지 않습니다.');
+
+    if (!signupData.blockchainwallet.trim()) return alert('블록체인 지갑 주소를 입력해주세요.');
+    if (!validateWalletAddress(signupData.blockchainwallet)) {
+      return alert('올바른 이더리움 지갑 주소를 입력해주세요.\n형식: 0x로 시작하는 40자리 16진수\n예시: 0x1234567890abcdef1234567890abcdef12345678');
+    }
 
     console.log('🚀 회원가입 시도:', {
       email: finalEmail,
@@ -472,6 +483,7 @@ const AuthForm = () => {
                 type="text"
                 value={signupData.blockchainwallet}
                 onChange={handleSignupChange}
+                required
               />
             </InputGroup>
           </InputContainer>

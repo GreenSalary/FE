@@ -72,6 +72,11 @@ const EditInfo = () => {
     }
   };
 
+  const validateWalletAddress = (address) => {
+    const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+    return walletRegex.test(address);
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -81,6 +86,8 @@ const EditInfo = () => {
 
     if (!formData.walletAddress.trim()) {
       newErrors.walletAddress = '블록체인 지갑 주소를 입력해주세요.';
+    } else if (!validateWalletAddress(formData.walletAddress.trim())) {
+      newErrors.walletAddress = '올바른 이더리움 지갑 주소 형식이 아닙니다.';
     }
 
     setErrors(newErrors);
@@ -89,7 +96,11 @@ const EditInfo = () => {
 
   const handleSave = async () => {
     if (!validateForm()) {
-      alert('필수 항목을 모두 입력해주세요.');
+      if (errors.walletAddress && errors.walletAddress.includes('형식')) {
+        alert('올바른 이더리움 지갑 주소를 입력해주세요.\n형식: 0x로 시작하는 40자리 16진수\n예시: 0x1234567890abcdef1234567890abcdef12345678');
+      } else {
+        alert('필수 항목을 모두 입력해주세요.');
+      }
       return;
     }
 
@@ -182,7 +193,7 @@ const EditInfo = () => {
           value={formData.walletAddress}
           onChange={handleInputChange}
           className={errors.walletAddress ? 'error' : ''}
-          placeholder="지갑 주소를 입력하세요"
+          placeholder="지갑 주소를 입력하세요 (예: 0x1234...abcd)"
         />
         {errors.walletAddress && <ErrorMessage>{errors.walletAddress}</ErrorMessage>}
 
