@@ -333,7 +333,7 @@ const AdvertiserCreate = () => {
 
   function formatKSTDateTime(dateStr, isStart) {
     const timeStr = isStart ? "00:00:00.000" : "23:59:59.999";
-    return `${dateStr}T${timeStr}+09:00`; // KST 명시
+    return `${dateStr}T${timeStr}+00:00`; // KST 명시
   }
 
   // 이미지를 서버에 업로드하는 함수 (토큰 불필요)
