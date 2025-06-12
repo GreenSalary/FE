@@ -278,7 +278,11 @@ const LoadingSpinner = styled.div`
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\./g, '-').replace(/\s/g, '');
 };
 
 // 사이트명 변환 함수
@@ -459,13 +463,13 @@ const AdvertiserDetail = () => {
             <Label>업로드 기간</Label>
             <ContentArea>
               <Input 
-                type="date" 
+                type="text" 
                 value={formatDate(adDetail.uploadPeriod?.startDate)} 
                 readOnly 
               />
               <div style={{ margin: '0 8px' }}>~</div>
               <Input 
-                type="date" 
+                type="text" 
                 value={formatDate(adDetail.uploadPeriod?.endDate)} 
                 readOnly 
               />
@@ -477,13 +481,13 @@ const AdvertiserDetail = () => {
               <Label>유지 기간</Label>
               <ContentArea>
                 <Input 
-                  type="date" 
+                  type="text" 
                   value={formatDate(adDetail.maintainPeriod?.startDate)} 
                   readOnly 
                 />
                 <div style={{ margin: '0 8px' }}>~</div>
                 <Input 
-                  type="date" 
+                  type="text" 
                   value={formatDate(adDetail.maintainPeriod?.endDate)} 
                   readOnly 
                 />

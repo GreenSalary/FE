@@ -336,6 +336,21 @@ const AdvertiserCreate = () => {
     return `${dateStr}T${timeStr}+00:00`; // KST 명시
   }
 
+  function formatKSTDateTime2(dateStr, isStart) {
+    const date = new Date(dateStr);
+    
+    if (isStart) {
+      date.setHours(0, 0, 0, 0);
+    } else {
+      date.setHours(23, 59, 59, 999);
+    }
+    
+    return date.toISOString();
+  }
+
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
   // 이미지를 서버에 업로드하는 함수 (토큰 불필요)
   const uploadImageToServer = async (file) => {
     const formData = new FormData();
@@ -465,7 +480,7 @@ const AdvertiserCreate = () => {
         console.log('사용된 Advertiser ID (userId):', userId);
       }
 
-      const depositAt = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString(); // 한국 시간 기준
+      const depositAt = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString();
       const depositTxHash = tx.transactionHash;
 
       const apiData = {
@@ -473,13 +488,13 @@ const AdvertiserCreate = () => {
         reward: parseFloat(formData.reward),
         recruits: parseInt(formData.maxInfluencer),
         uploadPeriod: {
-          startDate: formatKSTDateTime(formData.uploadStartDate, true), 
-          endDate: formatKSTDateTime(formData.uploadEndDate, false)       
+          startDate: formatKSTDateTime2(formData.uploadStartDate, true), 
+          endDate: formatKSTDateTime2(formData.uploadEndDate, false)       
         },
         ...(formData.maintainStartDate && formData.maintainEndDate && {
           maintainPeriod: {
-            startDate: formatKSTDateTime(formData.maintainStartDate, true), 
-            endDate: formatKSTDateTime(formData.maintainEndDate, false)      
+            startDate: formatKSTDateTime2(formData.maintainStartDate, true), 
+            endDate: formatKSTDateTime2(formData.maintainEndDate, false)      
           }
         }),
         ...(tags.length > 0 && { keywords: tags }),

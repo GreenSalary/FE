@@ -199,7 +199,7 @@ const formatAmount = (amount) => {
   // ETH는 보통 소수점 4자리까지 표시
   return numAmount.toLocaleString('ko-KR', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 4
+    maximumFractionDigits: 8
   }) + ' ETH';
 };
 
