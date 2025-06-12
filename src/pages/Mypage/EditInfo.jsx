@@ -94,6 +94,39 @@ const EditInfo = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleWalletInputClick = async () => {
+    if (!window.ethereum) {
+      alert('MetaMask가 설치되어 있지 않습니다.');
+      return;
+    }
+
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      if (accounts.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          walletAddress: accounts[0]
+        }));
+        
+        // 에러 초기화
+        setErrors(prev => ({
+          ...prev,
+          walletAddress: ''
+        }));
+      }
+    } catch (error) {
+      if (error.code === 4001) {
+        // 사용자가 취소한 경우, 기존 값 유지
+        console.log('사용자가 지갑 연결을 취소했습니다.');
+      } else {
+        alert('지갑 연결에 실패했습니다.');
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) {
       if (errors.walletAddress && errors.walletAddress.includes('형식')) {
@@ -191,9 +224,12 @@ const EditInfo = () => {
         <Input
           name="walletAddress"
           value={formData.walletAddress}
-          onChange={handleInputChange}
+          onClick={handleWalletInputClick}
+          onChange={() => {}} 
           className={errors.walletAddress ? 'error' : ''}
-          placeholder="지갑 주소를 입력하세요 (예: 0x1234...abcd)"
+          placeholder={formData.walletAddress ? "" : "클릭하여 MetaMask에서 지갑 주소를 가져오세요"}
+          readOnly
+          style={{ cursor: 'pointer' }}
         />
         {errors.walletAddress && <ErrorMessage>{errors.walletAddress}</ErrorMessage>}
 
@@ -256,6 +292,16 @@ const Input = styled.input`
   margin-bottom: 16px;
   box-sizing: border-box;
   background-color: white;
+
+  &[name="walletAddress"] {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 13px;
+    
+    &:hover {
+      border-color: #f6851b;
+      background-color: #fff8f3;
+    }
+  }
   
   &.error {
     border-color: #dc3545;

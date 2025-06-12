@@ -23,6 +23,7 @@ const AuthForm = () => {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   
   const [emailError, setEmailError] = useState('');
+  const [walletConnected, setWalletConnected] = useState(false);
   const [walletError, setWalletError] = useState('');
 
   const [loginData, setLoginData] = useState({
@@ -90,6 +91,35 @@ const AuthForm = () => {
     
     setCustomDomain(value);
     setEmailError(''); 
+  };
+
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      setWalletError('MetaMask가 설치되어 있지 않습니다.');
+      window.open('https://metamask.io/download/', '_blank');
+      return;
+    }
+
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      if (accounts.length > 0) {
+        setSignupData(prev => ({
+          ...prev,
+          blockchainwallet: accounts[0]
+        }));
+        setWalletConnected(true);
+        setWalletError('');
+      }
+    } catch (error) {
+      if (error.code === 4001) {
+        setWalletError('지갑 연결이 거부되었습니다.');
+      } else {
+        setWalletError('지갑 연결 중 오류가 발생했습니다.');
+      }
+    }
   };
 
   const handleSignupSubmit = async (e) => {
@@ -479,12 +509,17 @@ const AuthForm = () => {
               </svg>
               <Input
                 name="blockchainwallet"
-                placeholder="블록체인 지갑 주소"
-                type="text"
+                placeholder={walletConnected ? "MetaMask에서 연결된 주소" : "MetaMask 연결 필요"}
                 value={signupData.blockchainwallet}
-                onChange={handleSignupChange}
-                required
+                readOnly
               />
+              <WalletButton 
+                onClick={connectWallet} 
+                type="button"
+                className={walletConnected ? 'connected' : ''}
+              >
+                {walletConnected ? '✅ 연결됨' : '🦊 연결'}
+              </WalletButton>
             </InputGroup>
           </InputContainer>
           
@@ -880,5 +915,38 @@ const DomainSelector = styled.select`
   
   &:hover {
     background-color: rgba(0, 0, 0, 0.05);
+  }
+`;
+
+// 기존 스타일 컴포넌트들 아래에 추가
+const WalletButton = styled.button`
+  background: linear-gradient(45deg, #f6851b, #e2761b);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  white-space: nowrap;
+  
+  &:hover {
+    background: linear-gradient(45deg, #e2761b, #d16919);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  /* 연결됨 상태일 때 */
+  &.connected {
+    background: linear-gradient(45deg, #51cf66, #40c057);
+    
+    &:hover {
+      background: linear-gradient(45deg, #40c057, #37b24d);
+    }
   }
 `;
