@@ -10,7 +10,11 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\./g, '-').replace(/\s/g, '');
 };
 
 
@@ -248,13 +252,13 @@ const AdminDetail = () => {
             <Label>업로드 기간</Label>
             <ContentArea>
               <Input 
-                type="date" 
+                type="text" 
                 value={formatDate(formData.uploadPeriod?.startDate)} 
                 readOnly 
               />
               <div style={{ margin: '0 8px' }}>~</div>
               <Input 
-                type="date" 
+                type="text" 
                 value={formatDate(formData.uploadPeriod?.endDate)} 
                 readOnly 
               />
@@ -265,13 +269,13 @@ const AdminDetail = () => {
               <Label>유지 기간</Label>
               <ContentArea>
                 <Input 
-                  type="date" 
+                  type="text" 
                   value={formatDate(formData.maintainPeriod?.startDate)} 
                   readOnly 
                 />
                 <div style={{ margin: '0 8px' }}>~</div>
                 <Input 
-                  type="date" 
+                  type="text" 
                   value={formatDate(formData.maintainPeriod?.endDate)} 
                   readOnly 
                 />
