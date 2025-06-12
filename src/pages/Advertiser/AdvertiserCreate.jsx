@@ -319,17 +319,17 @@ const AdvertiserCreate = () => {
     }
   };
 
-  // const convertKSTToUTC = (kstDateString, endOfDay = false) => {
-  //   const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
-  //   const kstDate = new Date(kstDateString + timeString);
-  //   return kstDate.toISOString(); 
-  // };
+  const convertKSTToUTC = (kstDateString, endOfDay = false) => {
+    const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
+    const kstDate = new Date(kstDateString + timeString);
+    return kstDate.toISOString(); 
+  };
 
-  // const convertKSTToUTCTimestamp = (kstDateString, endOfDay = false) => {
-  //   const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
-  //   const kstDate = new Date(kstDateString + timeString);
-  //   return Math.floor(kstDate.getTime() / 1000);
-  // };
+  const convertKSTToUTCTimestamp = (kstDateString, endOfDay = false) => {
+    const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
+    const kstDate = new Date(kstDateString + timeString);
+    return Math.floor(kstDate.getTime() / 1000);
+  };
 
   function formatKSTDateTime(dateStr, isStart) {
     const timeStr = isStart ? "00:00:00" : "23:59:59";
