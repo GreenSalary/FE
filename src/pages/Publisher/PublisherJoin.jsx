@@ -262,25 +262,15 @@ const PublisherJoin = () => {
     navigate(-1); 
   };
 
-  // 날짜 포맷팅 함수
   const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
-  };
-
-  const formatDateToKST = (utcDateString) => {
-    if (!utcDateString) return '';
-    
-    const utcDate = new Date(utcDateString + 'T00:00:00Z');
-    const kstDate = new Date(utcDate.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
-    
-    const year = kstDate.getFullYear();
-    const month = String(kstDate.getMonth() + 1).padStart(2, '0');
-    const day = String(kstDate.getDate()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}`;
-  };
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\./g, '-').replace(/\s/g, '');
+};
 
   // 사이트명 변환 함수
   const getSiteDisplayName = (siteCode) => {
@@ -357,14 +347,14 @@ const PublisherJoin = () => {
                 <Label>업로드 기간</Label>
                 <ContentArea>
                   <Input 
-                    type="date" 
-                    value={formatDateToKST(contractDetail.uploadPeriod?.startDate)} 
+                    type="text" 
+                    value={formatDate(contractDetail.uploadPeriod?.startDate)} 
                     readOnly 
                   />
                   <div style={{ margin: '0 8px' }}>~</div>
                   <Input 
-                    type="date" 
-                    value={formatDateToKST(contractDetail.uploadPeriod?.endDate)} 
+                    type="text" 
+                    value={formatDate(contractDetail.uploadPeriod?.endDate)} 
                     readOnly 
                   />
                 </ContentArea>
@@ -375,14 +365,14 @@ const PublisherJoin = () => {
                   <Label>유지 기간</Label>
                   <ContentArea>
                     <Input 
-                      type="date" 
-                      value={formatDateToKST(contractDetail.maintainPeriod?.startDate)} 
+                      type="text" 
+                      value={formatDate(contractDetail.maintainPeriod?.startDate)} 
                       readOnly 
                     />
                     <div style={{ margin: '0 8px' }}>~</div>
                     <Input 
-                      type="date" 
-                      value={formatDateToKST(contractDetail.maintainPeriod?.endDate)} 
+                      type="text" 
+                      value={formatDate(contractDetail.maintainPeriod?.endDate)} 
                       readOnly 
                     />
                   </ContentArea>
