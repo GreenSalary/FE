@@ -460,6 +460,9 @@ const AdvertiserCreate = () => {
         console.log('사용된 Advertiser ID (userId):', userId);
       }
 
+      const depositAt = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString(); // 한국 시간 기준
+      const depositTxHash = tx.transactionHash;
+
       const apiData = {
         title: formData.adName, 
         reward: parseFloat(formData.reward),
@@ -499,6 +502,9 @@ const AdvertiserCreate = () => {
         ...(photoRequired && productImageUrl && { photo_url: productImageUrl }),
         
         smartContractId: smartContractAdId,           // 광고 ID
+        deposit_at: depositAt,
+        deposit_tx_hash: depositTxHash,
+
       };
 
       console.log('백엔드 API 호출 데이터:', apiData);
