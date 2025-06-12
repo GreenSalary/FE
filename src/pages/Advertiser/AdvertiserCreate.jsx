@@ -319,11 +319,10 @@ const AdvertiserCreate = () => {
     }
   };
 
-  const convertKSTToUTC = (kstDateString) => {
-    // 사용자가 선택한 날짜를 KST로 해석
-    const kstDate = new Date(kstDateString + 'T00:00:00+09:00');
-    // UTC 날짜 문자열로 변환
-    return kstDate.toISOString().split('T')[0];
+  const convertKSTToUTC = (kstDateString, endOfDay = false) => {
+    const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
+    const kstDate = new Date(kstDateString + timeString);
+    return kstDate.toISOString(); 
   };
 
   const convertKSTToUTCTimestamp = (kstDateString, endOfDay = false) => {
@@ -467,12 +466,12 @@ const AdvertiserCreate = () => {
         recruits: parseInt(formData.maxInfluencer),
         uploadPeriod: {
           startDate: convertKSTToUTC(formData.uploadStartDate), // KST → UTC
-          endDate: convertKSTToUTC(formData.uploadEndDate)       // KST → UTC
+          endDate: convertKSTToUTC(formData.uploadEndDate, true)        // KST → UTC
         },
         ...(formData.maintainStartDate && formData.maintainEndDate && {
           maintainPeriod: {
             startDate: convertKSTToUTC(formData.maintainStartDate), // KST → UTC
-            endDate: convertKSTToUTC(formData.maintainEndDate)       // KST → UTC
+            endDate: convertKSTToUTC(formData.maintainEndDate, true)       // KST → UTC
           }
         }),
         ...(tags.length > 0 && { keywords: tags }),
