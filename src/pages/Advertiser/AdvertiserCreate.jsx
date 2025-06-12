@@ -332,7 +332,7 @@ const AdvertiserCreate = () => {
   };
 
   function formatKSTDateTime(dateStr, isStart) {
-    const timeStr = isStart ? "00:00:00" : "23:59:59";
+    const timeStr = isStart ? "00:00:00.000" : "23:59:59.999";
     return `${dateStr}T${timeStr}+09:00`; // KST 명시
   }
 
