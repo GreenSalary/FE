@@ -107,7 +107,7 @@ const AdvertiserCreate = () => {
 
   // 기존 함수들
   const handleAddCondition = () => {
-    if (conditions.length < 6 && conditions[conditions.length - 1].trim() !== '') {
+    if (conditions.length < 3 && conditions[conditions.length - 1].trim() !== '') {
       setConditions([...conditions, '']);
       setConditionErrors([...conditionErrors, false]);
     }
@@ -742,7 +742,7 @@ const AdvertiserCreate = () => {
                 )}
                 </ConditionRow>
             ))}
-            {conditions.length < 6 && (
+            {conditions.length < 3 && (
                 <AddButtonContainer>
                 <AddButton onClick={handleAddCondition}>
                     + 추가하기

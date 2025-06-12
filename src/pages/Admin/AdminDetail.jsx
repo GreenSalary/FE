@@ -73,7 +73,7 @@ const AdminDetail = () => {
       
       console.log('✅ 문의 수락 요청:', askId);
       
-      const response = await authenticatedFetch(`${API_BASE_URL}/admin/ask/${askId}/approve`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/ask/${askId}/reject`, {
         method: 'POST'
       });
       
@@ -106,7 +106,7 @@ const AdminDetail = () => {
       
       console.log('❌ 문의 거절 요청:', askId);
       
-      const response = await authenticatedFetch(`${API_BASE_URL}/admin/ask/${askId}/reject`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/admin/ask/${askId}/approve`, {
         method: 'POST'
       });
       
