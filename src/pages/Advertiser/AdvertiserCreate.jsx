@@ -473,13 +473,13 @@ const AdvertiserCreate = () => {
         reward: parseFloat(formData.reward),
         recruits: parseInt(formData.maxInfluencer),
         uploadPeriod: {
-          startDate: formatKSTDateTime(formData.uploadStartDate), 
-          endDate: formatKSTDateTime(formData.uploadEndDate, true)       
+          startDate: formatKSTDateTime(formData.uploadStartDate, true), 
+          endDate: formatKSTDateTime(formData.uploadEndDate, false)       
         },
         ...(formData.maintainStartDate && formData.maintainEndDate && {
           maintainPeriod: {
-            startDate: formatKSTDateTime(formData.maintainStartDate), 
-            endDate: formatKSTDateTime(formData.maintainEndDate, true)      
+            startDate: formatKSTDateTime(formData.maintainStartDate, true), 
+            endDate: formatKSTDateTime(formData.maintainEndDate, false)      
           }
         }),
         ...(tags.length > 0 && { keywords: tags }),
