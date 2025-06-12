@@ -319,17 +319,22 @@ const AdvertiserCreate = () => {
     }
   };
 
-  const convertKSTToUTC = (kstDateString, endOfDay = false) => {
-    const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
-    const kstDate = new Date(kstDateString + timeString);
-    return kstDate.toISOString(); 
-  };
+  // const convertKSTToUTC = (kstDateString, endOfDay = false) => {
+  //   const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
+  //   const kstDate = new Date(kstDateString + timeString);
+  //   return kstDate.toISOString(); 
+  // };
 
-  const convertKSTToUTCTimestamp = (kstDateString, endOfDay = false) => {
-    const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
-    const kstDate = new Date(kstDateString + timeString);
-    return Math.floor(kstDate.getTime() / 1000);
-  };
+  // const convertKSTToUTCTimestamp = (kstDateString, endOfDay = false) => {
+  //   const timeString = endOfDay ? 'T23:59:59+09:00' : 'T00:00:00+09:00';
+  //   const kstDate = new Date(kstDateString + timeString);
+  //   return Math.floor(kstDate.getTime() / 1000);
+  // };
+
+  function formatKSTDateTime(dateStr, isStart) {
+    const timeStr = isStart ? "00:00:00" : "23:59:59";
+    return `${dateStr}T${timeStr}+09:00`; // KST 명시
+  }
 
   // 이미지를 서버에 업로드하는 함수 (토큰 불필요)
   const uploadImageToServer = async (file) => {
@@ -468,13 +473,13 @@ const AdvertiserCreate = () => {
         reward: parseFloat(formData.reward),
         recruits: parseInt(formData.maxInfluencer),
         uploadPeriod: {
-          startDate: convertKSTToUTC(formData.uploadStartDate), // KST → UTC
-          endDate: convertKSTToUTC(formData.uploadEndDate, true)        // KST → UTC
+          startDate: formatKSTDateTime(formData.uploadStartDate), 
+          endDate: formatKSTDateTime(formData.uploadEndDate, true)       
         },
         ...(formData.maintainStartDate && formData.maintainEndDate && {
           maintainPeriod: {
-            startDate: convertKSTToUTC(formData.maintainStartDate), // KST → UTC
-            endDate: convertKSTToUTC(formData.maintainEndDate, true)       // KST → UTC
+            startDate: formatKSTDateTime(formData.maintainStartDate), 
+            endDate: formatKSTDateTime(formData.maintainEndDate, true)      
           }
         }),
         ...(tags.length > 0 && { keywords: tags }),
