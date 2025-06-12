@@ -430,7 +430,7 @@ const AdvertiserCreate = () => {
             log.data,
             log.topics
           );
-          return decoded.adId !== undefined && decoded.advertiserId == userId;
+          return decoded.adId !== undefined && decoded.advertiserId === userId;
         } catch (e) {
           return false;
         }

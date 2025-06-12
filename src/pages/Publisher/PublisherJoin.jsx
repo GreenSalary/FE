@@ -193,7 +193,7 @@ const PublisherJoin = () => {
               log.data,
               log.topics
             );
-            return decoded.adId == contractDetail.smartContractId;
+            return decoded.adId === contractDetail.smartContractId;
           } catch (e) {
             return false;
           }
