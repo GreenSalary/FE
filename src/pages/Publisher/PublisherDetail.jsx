@@ -157,6 +157,7 @@ const PublisherDetail = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('📋 URL 정보:', data);
+        console.log('📋 PDF 이미지들:', data.pdf_images_url || []);
         setUrlInfo(data);
         setCurrentUrl(data.url || '');
       } else {

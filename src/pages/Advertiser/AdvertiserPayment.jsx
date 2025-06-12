@@ -225,8 +225,10 @@ const AdvertiserPayment = () => {
       params.append('sort', sortOrder);
       
       const apiUrl = `${API_BASE_URL}/advertiser/contract/${adId}/transactions?${params.toString()}`;
+      console.log('api',apiUrl);
       
       const response = await authenticatedFetch(apiUrl);
+      console.log('res',response);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -257,8 +259,10 @@ const AdvertiserPayment = () => {
 
   // 정렬 변경 시 새로운 데이터 요청
   const handleSortChange = (newSort) => {
+    console.log('🔄 정렬 변경 시작:', newSort);
     setSort(newSort);
     if (adId && isLoggedIn && getToken()) {
+      console.log('✅ 조건 만족, fetchTransactions 호출');
       fetchTransactions(newSort);
     }
   };

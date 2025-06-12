@@ -159,17 +159,29 @@ const LoadingSpinner = styled.div`
   }
 `;
 
+const FilterToggle = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  justify-content: center;
+`;
+
 // 상태 매핑 함수 (API 상태 -> 화면 표시용 상태)
 const mapStatusForDisplay = (contract) => {
   const { status, rewardPaid } = contract;
   
-  if (status === 'APPROVED' || rewardPaid === true) {
-    return 'completed';
-  } else if (status === 'PENDING' || status === 'REJECTED') {
-    return 'incomplete';
+  if (rewardPaid === true) {
+    return 'deposited'; 
+  } else if (status === 'APPROVED') {
+    return 'onlyurlcomplete'; 
+  } else if (status === 'PENDING') {
+    return 'not_executed'; 
+  } else if (status === 'REJECTED') {
+    return 'onlyurlrejected'; 
   }
   
-  return 'incomplete'; // 기본값
+  return 'not_executed'; // 기본값
 };
 
 // 정렬 라벨 반환 함수
@@ -318,8 +330,8 @@ const InfluencerHome = () => {
     if (filterToggleRef.current) {
       const rect = filterToggleRef.current.getBoundingClientRect();
       setDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX
+        top: rect.bottom + window.scrollY - 10,
+        left: rect.left + window.scrollX + 73
       });
     }
     setShowDropdown(prev => !prev);
@@ -357,7 +369,12 @@ const InfluencerHome = () => {
           <thead>
             <tr>
               <th>광고명</th>
-              <th>상태</th>
+              <th 
+                  ref={filterToggleRef}
+                  onClick={handleFilterToggleClick}
+                >
+                  상태 <FaChevronDown size={12} color="#888" />
+              </th>
             </tr>
           </thead>
         </FixedHeader>
@@ -423,9 +440,10 @@ const InfluencerHome = () => {
           }}
         >
           <DropdownItem onClick={() => handleFilterSelect('ALL')}>전체</DropdownItem>
-          <DropdownItem onClick={() => handleFilterSelect('PENDING')}>대기중</DropdownItem>
-          <DropdownItem onClick={() => handleFilterSelect('APPROVED')}>완료</DropdownItem>
-          <DropdownItem onClick={() => handleFilterSelect('REJECTED')}>거절</DropdownItem>
+          <DropdownItem onClick={() => handleFilterSelect('PAID')}>임금완료</DropdownItem>
+          <DropdownItem onClick={() => handleFilterSelect('PENDING')}>미제출</DropdownItem>
+          <DropdownItem onClick={() => handleFilterSelect('APPROVED')}>제출완료</DropdownItem>
+          <DropdownItem onClick={() => handleFilterSelect('REJECTED')}>제출거절</DropdownItem>
         </Dropdown>
       )}
     </Container>

@@ -14,10 +14,12 @@ const statusMap = {
   '마감':        { label: '마감',     bg: '#D9D9D9', color: '#878888' },
   review:        { label: '추가 검토중', bg: '#FFD59A', color: '#996F1A' },
   inquiry:       { label: '문의중',   bg: '#E6F3FF', color: '#0066CC' },
+  onlyurlcomplete:     { label: '제출승인', bg: '#CEEEDA', color: '#69AC81' },
+  onlyurlrejected:      { label: '제출거절',   bg: '#F6B6B8', color: '#B3475A' },
 };
 
 const Badge = styled.span`
-  width: 65px;
+  width: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
