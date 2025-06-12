@@ -640,6 +640,7 @@ const AdvertiserCreate = () => {
                 value={formData.uploadStartDate}
                 onChange={handleInputChange}
                 min={getTodayString()}
+                readOnly  
               />
               <div style={{ margin: '0 8px' }}>~</div>
               <Input 
@@ -649,6 +650,7 @@ const AdvertiserCreate = () => {
                 onChange={handleInputChange}
                 min={getNextDayString(formData.uploadStartDate)}
                 required
+                readOnly  
               />
             </ContentArea>
           </Row>
@@ -662,6 +664,7 @@ const AdvertiserCreate = () => {
                 value={formData.maintainStartDate}
                 onChange={handleInputChange}
                 min={getTodayString()}
+                readOnly  
               />
               <div style={{ margin: '0 8px' }}>~</div>
               <Input 
@@ -670,6 +673,7 @@ const AdvertiserCreate = () => {
                 value={formData.maintainEndDate}
                 onChange={handleInputChange}
                 min={getNextDayString(formData.maintainStartDate)}
+                readOnly  
               />
             </ContentArea>
           </Row>
