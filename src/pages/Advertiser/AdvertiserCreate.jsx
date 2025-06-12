@@ -76,8 +76,8 @@ const AdvertiserCreate = () => {
 
   const initWeb3 = async () => {
     try {
-      const providerUrl = process.env.REACT_APP_WEB3_PROVIDER_URL || 'http://127.0.0.1:8545';
-      const networkId = process.env.REACT_APP_NETWORK_ID || '1337';
+      const providerUrl = process.env.REACT_APP_WEB3_PROVIDER_URL;
+      const networkId = process.env.REACT_APP_NETWORK_ID;
       const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS || AdContract.networks[networkId]?.address;
 
       const web3Instance = new Web3(providerUrl);
