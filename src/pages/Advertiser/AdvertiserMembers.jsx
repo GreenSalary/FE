@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { useUser } from '../../contexts/UserContext';
 import Web3 from 'web3';
 import AdContract from '../../contracts/AdContract.json';
+import FeedbackImagesModal from '../../components/FeedbackImages'; 
 
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
@@ -26,6 +27,8 @@ const AdvertiserMembers = () => {
   const [contract, setContract] = useState(null);
   
   const { authenticatedFetch, isLoggedIn, getToken } = useUser();
+
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
 
   // 인플루언서 목록 가져오기 - 백엔드에서 필터링
   const fetchInfluencers = async (statusFilter = 'ALL') => {
@@ -521,12 +524,8 @@ const AdvertiserMembers = () => {
                         )}
                       </TableCell>
                       <TableCell width="80px" textAlign="center">
-                        {influencer.pdf_url ? (
-                          <FeedbackLink
-                            href={influencer.pdf_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
+                        {influencer.pdf_images_url && influencer.pdf_images_url?.length > 0 ? (
+                          <FeedbackLink onClick={() => setSelectedFeedback(influencer)}>
                             피드백
                           </FeedbackLink>
                         ) : (
@@ -576,6 +575,11 @@ const AdvertiserMembers = () => {
           </TooltipContent>
         </>
       )}
+      <FeedbackImagesModal 
+      influencer={selectedFeedback} 
+      onClose={() => setSelectedFeedback(null)}
+      isOpen={!!selectedFeedback}
+    />
     </Container>
   );
 };
@@ -761,7 +765,7 @@ const StatusDot = styled.div`
   background-color: ${({ status }) => {
     if (status === 'APPROVED') return '#28a745'; // 승인 - 초록색
     if (status === 'REJECTED') return '#dc3545';
-    if (status == 'REVIEW_FROM_ADV') return '#3F8CFE'    
+    if (status === 'REVIEW_FROM_ADV') return '#3F8CFE'    
     return '#6c757d'; // 대기 - 회색                              
   }};
   flex-shrink: 0;
