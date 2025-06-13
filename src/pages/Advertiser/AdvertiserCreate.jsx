@@ -789,6 +789,7 @@ const AdvertiserCreate = () => {
                     type="checkbox" 
                     checked={photoRequired} 
                     onChange={handlePhotoCheckChange}
+                    disabled
                   />
                   <div>사진</div>
                   <FixedWidthInput 
