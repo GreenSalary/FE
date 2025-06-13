@@ -294,12 +294,14 @@ const AdminList = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleRowClick = (askId) => {
-    navigate(`/admin/home/detail/${askId}`);
-  };
-
   const handleSortChange = (e) => {
     setSortOrder(e.target.value);
+  };
+
+  const handleRowClick = (askId, reviewStatus) => {
+    navigate(`/admin/home/detail/${askId}`, {
+      state: { reviewStatus } 
+    });
   };
 
   // 필터 토글 클릭 핸들러
@@ -395,7 +397,7 @@ const AdminList = () => {
                 </tr>
               ) : (
                 askList.map((ask) => (
-                  <tr key={ask.askId} onClick={() => handleRowClick(ask.askId)}>
+                  <tr key={ask.askId} onClick={() => handleRowClick(ask.askId, ask.review_status)}>
                     <td>{ask.title}</td>
                     <td>{formatDate(ask.due_date)}</td>
                     <td>{getRoleFromStatus(ask.review_status)}</td>

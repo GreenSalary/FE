@@ -1,6 +1,6 @@
 // src/pages/Admin/AdminDetail.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useUser } from '../../contexts/UserContext';
 
@@ -21,6 +21,11 @@ const formatDate = (dateString) => {
 const AdminDetail = () => {
   const { askId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const reviewStatus = location.state?.reviewStatus;
+  console.log('📋 전달받은 Review Status:', reviewStatus);
+
   const { authenticatedFetch } = useUser();
   
   const [formData, setFormData] = useState(null);
@@ -72,8 +77,14 @@ const AdminDetail = () => {
       setIsProcessing(true);
       
       console.log('✅ 문의 수락 요청:', askId);
+
+      const endpoint = reviewStatus === 'REVIEW_FROM_ADV' 
+        ? `/admin/ask/${askId}/reject`    
+        : `/admin/ask/${askId}/approve`;  
       
-      const response = await authenticatedFetch(`${API_BASE_URL}/admin/ask/${askId}/reject`, {
+      console.log('✅ 수락 API 호출:', endpoint);
+      
+      const response = await authenticatedFetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST'
       });
       
@@ -105,8 +116,12 @@ const AdminDetail = () => {
       setIsProcessing(true);
       
       console.log('❌ 문의 거절 요청:', askId);
+
+      const endpoint = reviewStatus === 'REVIEW_FROM_ADV' 
+      ? `/admin/ask/${askId}/approve`   
+      : `/admin/ask/${askId}/reject`;   
       
-      const response = await authenticatedFetch(`${API_BASE_URL}/admin/ask/${askId}/approve`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST'
       });
       
