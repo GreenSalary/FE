@@ -665,7 +665,7 @@ const AdvertiserCreate = () => {
                 value={formData.uploadStartDate}
                 onChange={handleInputChange}
                 min={getTodayString()}
-                // readOnly  
+                onKeyDown={(e) => e.preventDefault()}
               />
               <div style={{ margin: '0 8px' }}>~</div>
               <Input 
@@ -675,7 +675,7 @@ const AdvertiserCreate = () => {
                 onChange={handleInputChange}
                 min={getNextDayString(formData.uploadStartDate)}
                 required
-                // readOnly  
+                onKeyDown={(e) => e.preventDefault()}  
               />
             </ContentArea>
           </Row>
@@ -689,7 +689,7 @@ const AdvertiserCreate = () => {
                 value={formData.maintainStartDate}
                 onChange={handleInputChange}
                 min={getTodayString()}
-                // readOnly  
+                onKeyDown={(e) => e.preventDefault()} 
               />
               <div style={{ margin: '0 8px' }}>~</div>
               <Input 
@@ -698,7 +698,7 @@ const AdvertiserCreate = () => {
                 value={formData.maintainEndDate}
                 onChange={handleInputChange}
                 min={getNextDayString(formData.maintainStartDate)}
-                // readOnly  
+                onKeyDown={(e) => e.preventDefault()} 
               />
             </ContentArea>
           </Row>
@@ -761,8 +761,6 @@ const AdvertiserCreate = () => {
                 onChange={(e) => setUploadSite(e.target.value)}
               >
                 <option>네이버 블로그</option>
-                <option>인스타그램</option>
-                <option>유튜브</option>
               </Select>
             </ContentArea>
 
